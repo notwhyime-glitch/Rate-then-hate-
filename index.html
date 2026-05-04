@@ -5,40 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice Reveal</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        body, html {
             margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        .app-wrapper {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- LEFT SIDE: THE MYSTERY VIEWPORTS --- */
+        .video-side {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            border-right: 1px solid #222;
+            transition: all 0.5s ease;
+            /* Hidden initially until connected */
+            transform: translateX(-100%); 
+            opacity: 0;
+        }
+
+        .video-side.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .user-slot {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #111;
+            position: relative;
+            background: #050505;
+        }
+
+        .camera-placeholder {
+            width: 180px;
+            height: 180px;
+            background: #000;
+            border: 4px solid #fff;
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            animation: ledPulse 8s ease-in-out infinite;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
         }
 
-        @keyframes ledPulse {
-            0% { background-color: #000000; }   
-            50% { background-color: #1a1a1a; }  
-            100% { background-color: #000000; } 
+        .q-mark {
+            font-size: 100px;
+            font-weight: 800;
+            color: #fff;
+            user-select: none;
+        }
+
+        .label {
+            margin-top: 20px;
+            color: #555;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 3px;
+        }
+
+        /* --- RIGHT SIDE: CONTROLS --- */
+        .control-side {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a0a;
+            position: relative;
+            z-index: 10;
         }
 
         .container {
             text-align: center;
-            padding: 60px 40px;
-            background: rgba(255, 255, 255, 0.03); 
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 32px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            padding: 40px;
+            width: 100%;
+            max-width: 350px;
         }
 
         h1 {
             font-weight: 800;
             font-size: 2.5rem;
             margin-bottom: 12px;
-            color: #ffffff;
             letter-spacing: -1.5px;
         }
 
@@ -68,6 +129,13 @@
             display: none;
         }
 
+        #skipBtn {
+            background-color: #ff3333;
+            color: white;
+            margin-top: 20px;
+            display: none;
+        }
+
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
             70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
@@ -81,18 +149,40 @@
         }
     </style>
 
-    <!-- Scripts -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Voice Reveal</h1>
-        <p>Talk to a random stranger instantly.</p>
-        <button id="startBtn">Start Matching</button>
-        <button id="cancelBtn">Cancel Search</button>
+    <div class="app-wrapper">
+        <!-- LEFT SIDE: Viewports -->
+        <div class="video-side" id="videoSide">
+            <div class="user-slot">
+                <div class="camera-placeholder">
+                    <span class="q-mark">?</span>
+                </div>
+                <div class="label">Stranger</div>
+            </div>
+            <div class="user-slot">
+                <div class="camera-placeholder">
+                    <span class="q-mark">?</span>
+                </div>
+                <div class="label">You</div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Controls -->
+        <div class="control-side">
+            <div class="container">
+                <h1 id="mainTitle">Voice Reveal</h1>
+                <p id="statusDesc">Talk to a random stranger instantly.</p>
+                
+                <button id="startBtn">Start Matching</button>
+                <button id="cancelBtn">Cancel Search</button>
+                <button id="skipBtn">Skip / Hate</button>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -104,81 +194,103 @@ const firebaseConfig = {
   appId: "1:195653571803:web:6482704037cb0f2835e8fe"
 };
 
-// Start the app using the config above
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-    // 2. Setup Peer
-    const peer = new Peer();
-    const btn = document.getElementById('startBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    let localStream;
-    let myId; 
 
-    peer.on('open', (id) => {
-        myId = id; 
-        console.log('Your Voice ID is: ' + id);
-    });
+// 2. Setup Peer & Elements
+const peer = new Peer();
+const startBtn = document.getElementById('startBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const skipBtn = document.getElementById('skipBtn');
+const videoSide = document.getElementById('videoSide');
+const statusDesc = document.getElementById('statusDesc');
 
-    peer.on('call', (call) => {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            call.answer(stream); 
-            call.on('stream', (remoteStream) => {
-                playStream(remoteStream);
-            });
+let localStream;
+let myId; 
+let myEntry;
+
+peer.on('open', (id) => {
+    myId = id; 
+    console.log('Your Voice ID: ' + id);
+});
+
+// Incoming Call Handler
+peer.on('call', (call) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        localStream = stream;
+        call.answer(stream); 
+        call.on('stream', (remoteStream) => {
+            playStream(remoteStream);
+            showCallUI();
         });
     });
+});
 
-    // 3. Matchmaking
-    btn.addEventListener('click', async () => {
-        if (!myId) return alert("Still connecting... wait a second.");
-        
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            btn.innerText = "Searching...";
-            btn.classList.add('searching');
-            cancelBtn.style.display = "block";
-
-            const lobbyRef = db.ref('lobby');
-
-            lobbyRef.once('value', (snapshot) => {
-                const users = snapshot.val();
-                
-                if (users) {
-                    const keys = Object.keys(users);
-                    const partnerId = users[keys[0]];
-                    db.ref('lobby/' + keys[0]).remove();
-
-                    const call = peer.call(partnerId, localStream);
-                    call.on('stream', (remoteStream) => { playStream(remoteStream); });
-                    btn.innerText = "Connected!";
-                } else {
-                    const myEntry = lobbyRef.push(myId);
-                    cancelBtn.onclick = () => {
-                        myEntry.remove();
-                        location.reload();
-                    };
-                }
-            });
-        } catch (err) {
-            alert("Please allow mic access!");
-        }
-    });
-
-  function playStream(stream) {
-        const audio = document.createElement('audio'); // Create element in DOM
-        audio.srcObject = stream;
-        audio.autoplay = true; // Force autoplay
-        audio.controls = false; 
-        document.body.appendChild(audio); // Add to page (hidden)
-        
-        audio.play().catch(e => {
-            console.error("Playback blocked! Click the page to enable sound.", e);
-            // Fallback: Play on next click
-            window.addEventListener('click', () => audio.play(), { once: true });
-        });
+// 3. Matchmaking Logic
+startBtn.addEventListener('click', async () => {
+    if (!myId) return alert("Still connecting... wait a second.");
     
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        startBtn.innerText = "Searching...";
+        startBtn.classList.add('searching');
+        cancelBtn.style.display = "block";
+
+        const lobbyRef = db.ref('lobby');
+
+        lobbyRef.once('value', (snapshot) => {
+            const users = snapshot.val();
+            
+            if (users) {
+                // Partner Found
+                const keys = Object.keys(users);
+                const partnerId = users[keys[0]];
+                db.ref('lobby/' + keys[0]).remove();
+
+                const call = peer.call(partnerId, localStream);
+                call.on('stream', (remoteStream) => { 
+                    playStream(remoteStream); 
+                    showCallUI();
+                });
+            } else {
+                // Join Lobby
+                myEntry = lobbyRef.push(myId);
+                cancelBtn.onclick = () => {
+                    myEntry.remove();
+                    location.reload();
+                };
+            }
+        });
+    } catch (err) {
+        alert("Please allow mic access!");
     }
+});
+
+// UI Transition Function
+function showCallUI() {
+    videoSide.classList.add('active');
+    startBtn.style.display = "none";
+    cancelBtn.style.display = "none";
+    skipBtn.style.display = "block";
+    statusDesc.innerText = "Connected. Don't be shy.";
+    
+    skipBtn.onclick = () => {
+        if (myEntry) myEntry.remove();
+        location.reload();
+    };
+}
+
+function playStream(stream) {
+    const audio = new Audio();
+    audio.srcObject = stream;
+    audio.autoplay = true;
+    document.body.appendChild(audio);
+    
+    audio.play().catch(() => {
+        window.addEventListener('click', () => audio.play(), { once: true });
+    });
+}
 </script>
 </body>
 </html>
