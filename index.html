@@ -165,10 +165,19 @@ const db = firebase.database();
         }
     });
 
-    function playStream(stream) {
-        const audio = new Audio();
+  function playStream(stream) {
+        const audio = document.createElement('audio'); // Create element in DOM
         audio.srcObject = stream;
-        audio.play();
+        audio.autoplay = true; // Force autoplay
+        audio.controls = false; 
+        document.body.appendChild(audio); // Add to page (hidden)
+        
+        audio.play().catch(e => {
+            console.error("Playback blocked! Click the page to enable sound.", e);
+            // Fallback: Play on next click
+            window.addEventListener('click', () => audio.play(), { once: true });
+        });
+    
     }
 </script>
 </body>
