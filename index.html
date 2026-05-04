@@ -96,14 +96,17 @@
     </div>
 
 <script>
-    // 1. Initialize Firebase (PASTE YOUR REAL KEYS HERE)
-  const firebaseConfig = {
-  apiKey:  "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
+// 1. Initialize Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
   databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
   projectId: "rate-then-hate-backend",
   appId: "1:195653571803:web:6482704037cb0f2835e8fe"
 };
 
+// Start the app using the config above
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
     // 2. Setup Peer
     const peer = new Peer();
     const btn = document.getElementById('startBtn');
