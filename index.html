@@ -10,7 +10,7 @@
             margin: 0; padding: 0; height: 100vh; width: 100vw;
             background-color: var(--bg); color: white;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden; touch-action: none; /* Prevents accidental zooming/scrolling */
+            overflow: hidden; touch-action: none;
         }
 
         .app-wrapper { display: flex; height: 100vh; width: 100vw; }
@@ -21,57 +21,59 @@
             background: #000; border-right: 1px solid #222;
             transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
             transform: translateX(-100%);
+            pointer-events: none;
         }
-        .video-side.active { transform: translateX(0); }
+        .video-side.active { transform: translateX(0); pointer-events: auto; }
         .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; }
         .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
         .q-mark { font-size: 50px; font-weight: 800; }
 
         /* CONTROL SIDE */
-        .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); }
-        .container { text-align: center; padding: 20px; width: 80%; }
+        .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); position: relative; }
+        .container { text-align: center; padding: 20px; width: 85%; max-width: 350px; z-index: 10; }
         
-        h1 { font-weight: 900; font-size: 2.8rem; margin: 0; letter-spacing: -2px; }
-        .tagline { color: #666; margin-bottom: 30px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        h1 { font-weight: 900; font-size: 3rem; margin: 0; letter-spacing: -2px; }
+        .tagline { color: #666; margin-bottom: 40px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
 
         /* BUTTONS */
         .main-btn { 
             background: #fff; color: #000; border: none; padding: 20px; 
-            font-size: 1rem; font-weight: 800; border-radius: 12px; width: 100%;
+            font-size: 1.1rem; font-weight: 800; border-radius: 14px; width: 100%;
             -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
         }
         #cancelBtn { background: #222; color: #fff; margin-top: 15px; display: none; }
 
-        /* THE FIX: FIXED POSITION SKIP BUTTON */
+        /* FIXED SKIP BUTTON - HIGH PRIORITY */
         #skipBtn { 
             display: none;
             position: fixed;
-            bottom: 40px; 
-            right: 5%;
-            width: 90%; /* Almost full width on mobile for easy thumb access */
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%; 
             max-width: 340px;
             background: var(--red); 
             color: white; 
             padding: 22px;
             font-size: 1.2rem;
             font-weight: 900;
-            border-radius: 16px;
+            border-radius: 18px;
             border: none;
-            z-index: 99999; /* Higher than all other layers */
-            box-shadow: 0 10px 40px rgba(255, 59, 48, 0.4);
-            text-transform: uppercase;
+            z-index: 99999; 
+            box-shadow: 0 12px 40px rgba(255, 59, 48, 0.4);
         }
 
-        #timer { font-family: monospace; font-size: 1.5rem; color: var(--red); margin-bottom: 10px; display: none; }
+        #timer { font-family: monospace; font-size: 1.8rem; color: var(--red); margin-bottom: 10px; display: none; font-weight: bold; }
 
-        /* RATING OVERLAY */
+        /* RATING SCREEN */
         #rating-screen { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); 
+            position: fixed; inset: 0; background: #000; 
             display: none; flex-direction: column; justify-content: center; 
             align-items: center; z-index: 100000; padding: 20px; 
         }
-        .rate-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin-top: 20px; }
-        .rate-btn { padding: 15px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; font-weight: bold; }
+        .rate-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin-top: 25px; }
+        .rate-btn { padding: 18px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -88,18 +90,17 @@
                 <h1>Rathe</h1>
                 <p class="tagline">rate then hate.</p>
                 <button id="startBtn" class="main-btn">START MATCHING</button>
-                <button id="cancelBtn" class="main-btn">CANCEL</button>
+                <button id="cancelBtn" class="main-btn">CANCEL SEARCH</button>
             </div>
         </div>
     </div>
 
-    <!-- The Skip Button is outside the flex wrapper -->
     <button id="skipBtn">SKIP / HATE</button>
 
     <audio id="remoteAudio" autoplay playsinline></audio>
 
     <div id="rating-screen">
-        <h1 style="font-size: 2rem;">RATE THEM</h1>
+        <h1 style="font-size: 2.5rem;">RATE THEM</h1>
         <div class="rate-grid" id="rateGrid"></div>
     </div>
 
@@ -130,28 +131,25 @@ let isConnected = false;
 
 peer.on('open', (id) => { myId = id; });
 
-// Unified Reset Function
+// Unified Reset (Goes back to first search state)
 function terminateAndRefresh() {
-    console.log("Terminating session...");
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     if (currentCall) currentCall.close();
     if (myEntry) myEntry.remove();
     
-    // Use replace to prevent back-button loops on mobile
-    const url = window.location.origin + window.location.pathname + "?v=" + Date.now();
-    window.location.replace(url);
+    // Hard refresh clears Peer state and UI
+    window.location.replace(window.location.origin + window.location.pathname + "?v=" + Date.now());
 }
 
-// THE MOBILE FIX: Use pointerdown for instant response
+// Skip listener (Manual)
 skipBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     terminateAndRefresh();
 });
 
-// START
+// START LOGIC
 startBtn.onclick = async () => {
-    // Unlock mobile audio
-    remoteAudio.play().catch(() => {}); remoteAudio.pause();
+    remoteAudio.play().catch(() => {}); remoteAudio.pause(); // Mobile unlock
     
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -164,27 +162,43 @@ startBtn.onclick = async () => {
             if (users) {
                 const partnerId = users[Object.keys(users)[0]];
                 db.ref('lobby/' + Object.keys(users)[0]).remove();
-                currentCall = peer.call(partnerId, localStream);
-                currentCall.on('stream', (rem) => { if(!isConnected) setupCall(rem); });
+                
+                const call = peer.call(partnerId, localStream);
+                setupCallHandlers(call);
             } else {
                 myEntry = db.ref('lobby').push(myId);
                 cancelBtn.onclick = () => terminateAndRefresh();
             }
         });
-    } catch(e) { alert("Mic required for matching."); }
+    } catch(e) { alert("Mic required."); }
 };
 
-// RECEIVER
+// RECEIVER LOGIC
 peer.on('call', (call) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localStream = stream;
-        currentCall = call;
         call.answer(stream);
-        call.on('stream', (rem) => { if(!isConnected) setupCall(rem); });
+        setupCallHandlers(call);
     });
 });
 
-function setupCall(stream) {
+function setupCallHandlers(call) {
+    currentCall = call;
+
+    // THE AUTO-SKIP FIX: Listen for the connection closing
+    call.on('close', () => {
+        console.log("Partner disconnected or skipped.");
+        terminateAndRefresh();
+    });
+
+    call.on('error', () => terminateAndRefresh());
+
+    call.on('stream', (rem) => {
+        if(!isConnected) finalizeConnection(rem);
+    });
+}
+
+function finalizeConnection(stream) {
     isConnected = true;
     remoteAudio.srcObject = stream;
     remoteAudio.play();
@@ -207,6 +221,7 @@ function launchRating() {
     skipBtn.style.display = "none";
     document.getElementById('rating-screen').style.display = 'flex';
     const grid = document.getElementById('rateGrid');
+    grid.innerHTML = '';
     for(let i=1; i<=10; i++) {
         const b = document.createElement('button');
         b.className = 'rate-btn'; b.innerText = i;
@@ -215,7 +230,7 @@ function launchRating() {
     }
 }
 
-// Cleanup
+// Cleanup if user kills tab
 window.onbeforeunload = () => { if(myEntry) myEntry.remove(); };
 </script>
 </body>
