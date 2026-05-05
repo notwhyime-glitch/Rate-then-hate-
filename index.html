@@ -32,7 +32,7 @@
         button { background-color: #fff; color: #000; border: none; padding: 20px; font-size: 1.1rem; font-weight: 700; border-radius: 14px; cursor: pointer; width: 100%; transition: all 0.2s ease; }
         button:disabled { background-color: #444; color: #888; cursor: not-allowed; }
         #cancelBtn { background-color: #222; color: white; margin-top: 15px; display: none; }
-        #skipBtn { background-color: #ff3b30; color: white; margin-top: 20px; display: none; }
+        #skipBtn { background-color: #ff3b30; color: white; margin-top: 20px; display: none; z-index: 50; }
         #rating-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         .rating-box { width: 90%; max-width: 450px; text-align: center; }
         .rating-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
@@ -64,6 +64,7 @@
             </div>
         </div>
     </div>
+
     <div id="rating-screen">
         <div class="rating-box">
             <h1 style="font-size: 3rem;">Time's Up.</h1>
@@ -77,6 +78,7 @@
     </div>
 
 <script>
+// Use the exact Firebase config from your workspace
 const firebaseConfig = {
   apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
   databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
@@ -93,15 +95,16 @@ const skipBtn = document.getElementById('skipBtn');
 const timerDisplay = document.getElementById('timer');
 const videoSide = document.getElementById('videoSide');
 
-let localStream, myId, myEntry, timerInterval;
-let isConnected = false; // Internal lock to prevent UI jumping
+let localStream, myId, myEntry, timerInterval, currentCall;
+let isConnected = false;
 
 peer.on('open', (id) => { myId = id; });
 
-// Handle Incoming Calls (RECEIVER)
+// RECEIVER logic
 peer.on('call', (call) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localStream = stream;
+        currentCall = call;
         call.answer(stream); 
         call.on('stream', (remoteStream) => { 
             if (!isConnected) {
@@ -112,13 +115,11 @@ peer.on('call', (call) => {
     });
 });
 
-// Handle Matching (CALLER)
+// CALLER logic
 startBtn.addEventListener('click', async () => {
     if (!myId || startBtn.disabled) return;
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Disable button immediately to prevent double-clicks/skipping
         startBtn.disabled = true; 
         startBtn.innerText = "Searching...";
         startBtn.classList.add('searching');
@@ -131,8 +132,8 @@ startBtn.addEventListener('click', async () => {
                 const partnerId = users[keys[0]];
                 db.ref('lobby/' + keys[0]).remove();
                 
-                const call = peer.call(partnerId, localStream);
-                call.on('stream', (remoteStream) => { 
+                currentCall = peer.call(partnerId, localStream);
+                currentCall.on('stream', (remoteStream) => { 
                     if (!isConnected) {
                         playStream(remoteStream); 
                         showCallUI(); 
@@ -140,20 +141,40 @@ startBtn.addEventListener('click', async () => {
                 });
             } else {
                 myEntry = db.ref('lobby').push(myId);
-                cancelBtn.onclick = () => { if(myEntry) myEntry.remove(); location.reload(); };
+                cancelBtn.onclick = () => resetSession();
             }
         });
     } catch (err) { alert("Mic required."); startBtn.disabled = false; }
 });
 
 function showCallUI() {
-    isConnected = true; // Lock state to preventing jumping
+    isConnected = true; 
     videoSide.classList.add('active');
     startBtn.style.display = "none";
     cancelBtn.style.display = "none";
     skipBtn.style.display = "block";
     timerDisplay.style.display = "block";
     startTimer(120); 
+}
+
+// ATTACH SKIP RESET
+skipBtn.onclick = () => resetSession();
+
+function resetSession() {
+    // 1. Physically Stop Microphone Hardware
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    // 2. Kill Active Peer Connection
+    if (currentCall) {
+        currentCall.close();
+    }
+    // 3. Remove from Firebase Lobby if still there
+    if (myEntry) {
+        myEntry.remove();
+    }
+    // 4. Force hard reload to reset PeerID and state
+    location.reload();
 }
 
 function startTimer(seconds) {
@@ -163,7 +184,10 @@ function startTimer(seconds) {
         let mins = Math.floor(time / 60);
         let secs = time % 60;
         timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        if (--time < 0) { clearInterval(timerInterval); showRatingScreen(); }
+        if (--time < 0) { 
+            clearInterval(timerInterval); 
+            showRatingScreen(); 
+        }
     }, 1000);
 }
 
@@ -176,7 +200,7 @@ function showRatingScreen() {
         groups[groupId].forEach(num => {
             const b = document.createElement('button');
             b.className = 'rate-btn'; b.innerText = num;
-            b.onclick = () => location.reload();
+            b.onclick = () => resetSession();
             container.appendChild(b);
         });
     });
@@ -184,9 +208,13 @@ function showRatingScreen() {
 
 function playStream(stream) {
     const audio = new Audio();
-    audio.srcObject = stream; audio.autoplay = true;
+    audio.srcObject = stream; 
+    audio.autoplay = true;
     document.body.appendChild(audio);
 }
+
+// Purge if user closes tab
+window.onbeforeunload = () => { if(myEntry) myEntry.remove(); };
 </script>
 </body>
 </html>
