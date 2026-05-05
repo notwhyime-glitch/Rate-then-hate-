@@ -13,49 +13,22 @@
             overflow: hidden; touch-action: none;
         }
 
-        /* FLEX CONTAINER */
-        .app-wrapper { 
-            display: flex; 
-            height: 100vh; 
-            width: 100vw; 
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* VIDEO SIDE (Hidden initially) */
+        /* VIDEO SIDE (Initial width 0 for full-screen lobby) */
         .video-side {
-            width: 0;
-            flex: 0;
-            display: flex; 
-            flex-direction: column;
-            background: #000; 
-            border-right: 0px solid #222;
-            overflow: hidden;
+            width: 0; flex: 0; display: flex; flex-direction: column;
+            background: #000; overflow: hidden; opacity: 0;
             transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            opacity: 0;
         }
-
-        /* ACTIVE VIDEO STATE (Split View) */
-        .video-side.active {
-            width: 60vw; /* Takes 60% of screen on call */
-            flex: 1.5;
-            opacity: 1;
-            border-right: 1px solid #222;
-        }
+        .video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid #222; }
 
         .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; }
         .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
         .q-mark { font-size: 50px; font-weight: 800; }
 
-        /* CONTROL SIDE (Full screen initially) */
-        .control-side { 
-            flex: 1; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background: var(--panel); 
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
+        /* CONTROL SIDE */
+        .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .container { text-align: center; padding: 20px; width: 85%; max-width: 400px; }
         
         h1 { font-weight: 900; font-size: 4rem; margin: 0; letter-spacing: -3px; }
@@ -68,7 +41,7 @@
         }
         #cancelBtn { background: #222; color: #fff; margin-top: 15px; display: none; }
 
-        /* SKIP BUTTON (Stays fixed for mobile safety) */
+        /* FIXED SKIP BUTTON */
         #skipBtn { 
             display: none;
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -120,6 +93,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
 <script>
+// Firebase Setup
 const firebaseConfig = {
     apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
     databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
@@ -129,14 +103,25 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// International-ready Peer Config
+// GLOBAL TURN/STUN CONFIGURATION
 const peer = new Peer({
     config: {
         'iceServers': [
             { url: 'stun:stun.l.google.com:19302' },
             { url: 'stun:stun1.l.google.com:19302' },
-            { url: 'stun:stun2.l.google.com:19302' }
-        ]
+            { url: 'stun:stun2.l.google.com:19302' },
+            {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            }
+        ],
+        'sdpSemantics': 'unified-plan'
     }
 });
 
@@ -152,6 +137,7 @@ let isConnected = false;
 
 peer.on('open', (id) => { myId = id; });
 
+// Unified Reset & Auto-Skip Handler
 function terminateAndRefresh() {
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     if (currentCall) currentCall.close();
@@ -159,13 +145,17 @@ function terminateAndRefresh() {
     window.location.replace(window.location.origin + window.location.pathname + "?v=" + Date.now());
 }
 
+// Manual Skip Handler (Mobile optimized)
 skipBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     terminateAndRefresh();
 });
 
+// INITIAL SEARCH
 startBtn.onclick = async () => {
+    // Unlock mobile audio context
     remoteAudio.play().catch(() => {}); remoteAudio.pause();
+    
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         startBtn.disabled = true;
@@ -183,9 +173,10 @@ startBtn.onclick = async () => {
                 cancelBtn.onclick = () => terminateAndRefresh();
             }
         });
-    } catch(e) { alert("Mic access required."); }
+    } catch(e) { alert("Enable microphone to search."); }
 };
 
+// INCOMING CALL
 peer.on('call', (call) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localStream = stream;
@@ -196,8 +187,11 @@ peer.on('call', (call) => {
 
 function setupCallHandlers(call) {
     currentCall = call;
+    
+    // Auto-reset if the other person skips/disconnects
     call.on('close', () => terminateAndRefresh());
     call.on('error', () => terminateAndRefresh());
+    
     call.on('stream', (rem) => {
         if(!isConnected) finalizeConnection(rem);
     });
@@ -208,9 +202,8 @@ function finalizeConnection(stream) {
     remoteAudio.srcObject = stream;
     remoteAudio.play();
     
-    // TRIGGER LAYOUT SHIFT
+    // Transition UI to Split Screen
     videoSide.classList.add('active');
-    
     startBtn.style.display = "none";
     cancelBtn.style.display = "none";
     skipBtn.style.display = "block";
@@ -228,6 +221,7 @@ function launchRating() {
     skipBtn.style.display = "none";
     document.getElementById('rating-screen').style.display = 'flex';
     const grid = document.getElementById('rateGrid');
+    grid.innerHTML = '';
     for(let i=1; i<=10; i++) {
         const b = document.createElement('button');
         b.className = 'rate-btn'; b.innerText = i;
