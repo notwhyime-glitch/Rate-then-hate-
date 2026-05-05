@@ -31,19 +31,14 @@
         .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: #0a0a0a; z-index: 10; }
         .container { text-align: center; padding: 40px; width: 100%; max-width: 350px; }
         
-        /* Timer above Rathe */
         #timer { 
             font-family: 'Courier New', Courier, monospace; 
-            font-size: 1.8rem; 
-            color: #ff3b30; 
-            margin-bottom: 10px; 
-            font-weight: bold;
-            display: none; /* Hidden until call starts */
+            font-size: 1.8rem; color: #ff3b30; margin-bottom: 10px; font-weight: bold;
+            display: none; 
         }
 
         h1 { font-weight: 900; font-size: 3.8rem; margin: 0; letter-spacing: -3px; line-height: 1; }
         .tagline { color: #666; margin-bottom: 40px; font-size: 1.1rem; letter-spacing: 1px; }
-        
         #statusDesc { color: #a1a1a1; margin-bottom: 30px; font-size: 0.95rem; line-height: 1.6; }
 
         button {
@@ -64,13 +59,8 @@
         }
         .rating-box { width: 90%; max-width: 450px; text-align: center; }
         .rating-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
-        
-        .rate-btn { 
-            padding: 15px; background: #111; color: white; border: 1px solid #333; 
-            border-radius: 10px; cursor: pointer; font-size: 1.2rem; font-weight: bold;
-        }
-        .rate-btn:hover { background: #fff; color: #000; border-color: #fff; }
-        
+        .rate-btn { padding: 15px; background: #111; color: white; border: 1px solid #333; border-radius: 10px; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+        .rate-btn:hover { background: #fff; color: #000; }
         .category-label { margin-top: 25px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; }
         .hate { color: #ff3b30; } .rate { color: #ffcc00; } .like { color: #4cd964; }
 
@@ -92,13 +82,10 @@
 
         <div class="control-side">
             <div class="container">
-                <!-- Timer positioned above Rathe -->
                 <div id="timer">02:00</div>
                 <h1>Rathe</h1>
                 <p class="tagline">rate then hate.</p>
-                
                 <p id="statusDesc">Connect instantly with a stranger. <br>Speak first, reveal later.</p>
-                
                 <button id="startBtn">Start Matching</button>
                 <button id="cancelBtn">Cancel Search</button>
                 <button id="skipBtn">Skip / Hate</button>
@@ -106,18 +93,14 @@
         </div>
     </div>
 
-    <!-- Rating Screen -->
     <div id="rating-screen">
         <div class="rating-box">
             <h1 style="font-size: 3rem;">Time's Up.</h1>
             <p style="color: #666; margin-bottom: 30px;">What is their fate?</p>
-            
             <div class="category-label hate">1 - 4 : Hate Them</div>
             <div class="rating-options" id="hate-group"></div>
-            
             <div class="category-label rate">5 - 6 : Rate Them</div>
             <div class="rating-options" id="rate-group"></div>
-            
             <div class="category-label like">7 - 10 : Like Them</div>
             <div class="rating-options" id="like-group"></div>
         </div>
@@ -146,17 +129,19 @@ let localStream, myId, myEntry, timerInterval;
 
 peer.on('open', (id) => { myId = id; });
 
+// RECEIVER
 peer.on('call', (call) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localStream = stream;
         call.answer(stream); 
         call.on('stream', (remoteStream) => { 
             playStream(remoteStream); 
-            showCallUI(); 
+            showCallUI(); // Trigger only on active audio stream
         });
     });
 });
 
+// CALLER
 startBtn.addEventListener('click', async () => {
     if (!myId) return alert("Initializing...");
     try {
@@ -174,38 +159,34 @@ startBtn.addEventListener('click', async () => {
                 const call = peer.call(partnerId, localStream);
                 call.on('stream', (remoteStream) => { 
                     playStream(remoteStream); 
-                    showCallUI(); 
+                    showCallUI(); // Trigger only on active audio stream
                 });
             } else {
                 myEntry = db.ref('lobby').push(myId);
-                cancelBtn.onclick = () => { 
-                    if(myEntry) myEntry.remove(); 
-                    location.reload(); 
-                };
+                cancelBtn.onclick = () => { if(myEntry) myEntry.remove(); location.reload(); };
             }
         });
     } catch (err) { alert("Mic access required."); }
 });
 
 function showCallUI() {
+    if (videoSide.classList.contains('active')) return; // Avoid double start
+    
     videoSide.classList.add('active');
     startBtn.style.display = "none";
     cancelBtn.style.display = "none";
     skipBtn.style.display = "block";
-    timerDisplay.style.display = "block"; // Reveal timer above Rathe
+    timerDisplay.style.display = "block";
     
-    statusDesc.innerHTML = "<b>Connected.</b><br>Pronounced 'Ray-th'.<br>Decide their fate.";
+    statusDesc.innerHTML = "<b>Connected.</b><br>Decide their fate.";
+    startTimer(120); 
     
-    startTimer(120); // 2 minutes
-    
-    skipBtn.onclick = () => {
-        if (myEntry) myEntry.remove();
-        location.reload();
-    };
+    skipBtn.onclick = () => location.reload();
 }
 
 function startTimer(seconds) {
     let time = seconds;
+    clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         let mins = Math.floor(time / 60);
         let secs = time % 60;
@@ -223,11 +204,7 @@ function showRatingScreen() {
 }
 
 function setupRatingButtons() {
-    const groups = { 
-        'hate-group': [1,2,3,4], 
-        'rate-group': [5,6], 
-        'like-group': [7,8,9,10] 
-    };
+    const groups = { 'hate-group': [1,2,3,4], 'rate-group': [5,6], 'like-group': [7,8,9,10] };
     Object.keys(groups).forEach(groupId => {
         const container = document.getElementById(groupId);
         container.innerHTML = '';
@@ -235,10 +212,7 @@ function setupRatingButtons() {
             const b = document.createElement('button');
             b.className = 'rate-btn';
             b.innerText = num;
-            b.onclick = () => {
-                alert(`You rated them a ${num}!`);
-                location.reload();
-            };
+            b.onclick = () => { alert(`You rated: ${num}`); location.reload(); };
             container.appendChild(b);
         });
     });
