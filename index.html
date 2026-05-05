@@ -2,88 +2,117 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rathe | rate then hate</title>
     <style>
+        :root { --red: #ff3b30; --bg: #000; --panel: #0a0a0a; }
         body, html {
             margin: 0; padding: 0; height: 100vh; width: 100vw;
-            background-color: #000; color: white;
+            background-color: var(--bg); color: white;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden;
+            overflow: hidden; touch-action: none; /* Prevents accidental zooming/scrolling */
         }
+
         .app-wrapper { display: flex; height: 100vh; width: 100vw; }
+
+        /* VIDEO SIDE */
         .video-side {
-            flex: 1.5; display: flex; flex-direction: column;
+            flex: 1.2; display: flex; flex-direction: column;
             background: #000; border-right: 1px solid #222;
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            transform: translateX(-100%); opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
+            transform: translateX(-100%);
         }
-        .video-side.active { transform: translateX(0); opacity: 1; }
-        .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid #111; background: #050505; }
-        .camera-placeholder { width: 160px; height: 160px; background: #000; border: 3px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        .q-mark { font-size: 90px; font-weight: 800; color: #fff; user-select: none; }
-        .label { margin-top: 15px; color: #444; text-transform: uppercase; font-size: 12px; letter-spacing: 4px; }
-        .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: #0a0a0a; z-index: 10; }
-        .container { text-align: center; padding: 40px; width: 100%; max-width: 350px; }
-        #timer { font-family: 'Courier New', Courier, monospace; font-size: 1.8rem; color: #ff3b30; margin-bottom: 10px; font-weight: bold; display: none; }
-        h1 { font-weight: 900; font-size: 3.8rem; margin: 0; letter-spacing: -3px; line-height: 1; }
-        .tagline { color: #666; margin-bottom: 40px; font-size: 1.1rem; letter-spacing: 1px; }
-        #statusDesc { color: #a1a1a1; margin-bottom: 30px; font-size: 0.95rem; line-height: 1.6; }
-        button { background-color: #fff; color: #000; border: none; padding: 20px; font-size: 1.1rem; font-weight: 700; border-radius: 14px; cursor: pointer; width: 100%; transition: all 0.2s ease; }
-        button:disabled { background-color: #444; color: #888; cursor: not-allowed; }
-        #cancelBtn { background-color: #222; color: white; margin-top: 15px; display: none; }
-        #skipBtn { background-color: #ff3b30; color: white; margin-top: 20px; display: none; z-index: 50; }
-        #rating-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        .rating-box { width: 90%; max-width: 450px; text-align: center; }
-        .rating-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
-        .rate-btn { padding: 15px; background: #111; color: white; border: 1px solid #333; border-radius: 10px; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
-        .category-label { margin-top: 25px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; }
-        .hate { color: #ff3b30; } .rate { color: #ffcc00; } .like { color: #4cd964; }
-        .searching { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); } 70% { box-shadow: 0 0 0 15px rgba(255,255,255,0); } }
+        .video-side.active { transform: translateX(0); }
+        .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; }
+        .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .q-mark { font-size: 50px; font-weight: 800; }
+
+        /* CONTROL SIDE */
+        .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); }
+        .container { text-align: center; padding: 20px; width: 80%; }
+        
+        h1 { font-weight: 900; font-size: 2.8rem; margin: 0; letter-spacing: -2px; }
+        .tagline { color: #666; margin-bottom: 30px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* BUTTONS */
+        .main-btn { 
+            background: #fff; color: #000; border: none; padding: 20px; 
+            font-size: 1rem; font-weight: 800; border-radius: 12px; width: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #cancelBtn { background: #222; color: #fff; margin-top: 15px; display: none; }
+
+        /* THE FIX: FIXED POSITION SKIP BUTTON */
+        #skipBtn { 
+            display: none;
+            position: fixed;
+            bottom: 40px; 
+            right: 5%;
+            width: 90%; /* Almost full width on mobile for easy thumb access */
+            max-width: 340px;
+            background: var(--red); 
+            color: white; 
+            padding: 22px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border-radius: 16px;
+            border: none;
+            z-index: 99999; /* Higher than all other layers */
+            box-shadow: 0 10px 40px rgba(255, 59, 48, 0.4);
+            text-transform: uppercase;
+        }
+
+        #timer { font-family: monospace; font-size: 1.5rem; color: var(--red); margin-bottom: 10px; display: none; }
+
+        /* RATING OVERLAY */
+        #rating-screen { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); 
+            display: none; flex-direction: column; justify-content: center; 
+            align-items: center; z-index: 100000; padding: 20px; 
+        }
+        .rate-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin-top: 20px; }
+        .rate-btn { padding: 15px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; font-weight: bold; }
     </style>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 </head>
 <body>
+
     <div class="app-wrapper">
         <div class="video-side" id="videoSide">
-            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div><div class="label">Stranger</div></div>
-            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div><div class="label">You</div></div>
+            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div></div>
+            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div></div>
         </div>
+        
         <div class="control-side">
             <div class="container">
                 <div id="timer">02:00</div>
                 <h1>Rathe</h1>
                 <p class="tagline">rate then hate.</p>
-                <p id="statusDesc">Connect instantly with a stranger. <br>Speak first, reveal later.</p>
-                <button id="startBtn">Start Matching</button>
-                <button id="cancelBtn">Cancel Search</button>
-                <button id="skipBtn">Skip / Hate</button>
+                <button id="startBtn" class="main-btn">START MATCHING</button>
+                <button id="cancelBtn" class="main-btn">CANCEL</button>
             </div>
         </div>
     </div>
 
+    <!-- The Skip Button is outside the flex wrapper -->
+    <button id="skipBtn">SKIP / HATE</button>
+
+    <audio id="remoteAudio" autoplay playsinline></audio>
+
     <div id="rating-screen">
-        <div class="rating-box">
-            <h1 style="font-size: 3rem;">Time's Up.</h1>
-            <div class="category-label hate">1 - 4 : Hate Them</div>
-            <div class="rating-options" id="hate-group"></div>
-            <div class="category-label rate">5 - 6 : Rate Them</div>
-            <div class="rating-options" id="rate-group"></div>
-            <div class="category-label like">7 - 10 : Like Them</div>
-            <div class="rating-options" id="like-group"></div>
-        </div>
+        <h1 style="font-size: 2rem;">RATE THEM</h1>
+        <div class="rate-grid" id="rateGrid"></div>
     </div>
 
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+
 <script>
-// Use the exact Firebase config from your workspace
 const firebaseConfig = {
-  apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
-  databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
-  projectId: "rate-then-hate-backend",
-  appId: "1:195653571803:web:6482704037cb0f2835e8fe"
+    apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
+    databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
+    projectId: "rate-then-hate-backend",
+    appId: "1:195653571803:web:6482704037cb0f2835e8fe"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -92,127 +121,101 @@ const peer = new Peer();
 const startBtn = document.getElementById('startBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const skipBtn = document.getElementById('skipBtn');
-const timerDisplay = document.getElementById('timer');
 const videoSide = document.getElementById('videoSide');
+const remoteAudio = document.getElementById('remoteAudio');
+const timerDisplay = document.getElementById('timer');
 
 let localStream, myId, myEntry, timerInterval, currentCall;
 let isConnected = false;
 
 peer.on('open', (id) => { myId = id; });
 
-// RECEIVER logic
+// Unified Reset Function
+function terminateAndRefresh() {
+    console.log("Terminating session...");
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    if (currentCall) currentCall.close();
+    if (myEntry) myEntry.remove();
+    
+    // Use replace to prevent back-button loops on mobile
+    const url = window.location.origin + window.location.pathname + "?v=" + Date.now();
+    window.location.replace(url);
+}
+
+// THE MOBILE FIX: Use pointerdown for instant response
+skipBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    terminateAndRefresh();
+});
+
+// START
+startBtn.onclick = async () => {
+    // Unlock mobile audio
+    remoteAudio.play().catch(() => {}); remoteAudio.pause();
+    
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        startBtn.disabled = true;
+        startBtn.innerText = "SEARCHING...";
+        cancelBtn.style.display = "block";
+
+        db.ref('lobby').once('value', (snap) => {
+            const users = snap.val();
+            if (users) {
+                const partnerId = users[Object.keys(users)[0]];
+                db.ref('lobby/' + Object.keys(users)[0]).remove();
+                currentCall = peer.call(partnerId, localStream);
+                currentCall.on('stream', (rem) => { if(!isConnected) setupCall(rem); });
+            } else {
+                myEntry = db.ref('lobby').push(myId);
+                cancelBtn.onclick = () => terminateAndRefresh();
+            }
+        });
+    } catch(e) { alert("Mic required for matching."); }
+};
+
+// RECEIVER
 peer.on('call', (call) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localStream = stream;
         currentCall = call;
-        call.answer(stream); 
-        call.on('stream', (remoteStream) => { 
-            if (!isConnected) {
-                playStream(remoteStream); 
-                showCallUI(); 
-            }
-        });
+        call.answer(stream);
+        call.on('stream', (rem) => { if(!isConnected) setupCall(rem); });
     });
 });
 
-// CALLER logic
-startBtn.addEventListener('click', async () => {
-    if (!myId || startBtn.disabled) return;
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        startBtn.disabled = true; 
-        startBtn.innerText = "Searching...";
-        startBtn.classList.add('searching');
-        cancelBtn.style.display = "block";
-
-        db.ref('lobby').once('value', (snapshot) => {
-            const users = snapshot.val();
-            if (users) {
-                const keys = Object.keys(users);
-                const partnerId = users[keys[0]];
-                db.ref('lobby/' + keys[0]).remove();
-                
-                currentCall = peer.call(partnerId, localStream);
-                currentCall.on('stream', (remoteStream) => { 
-                    if (!isConnected) {
-                        playStream(remoteStream); 
-                        showCallUI(); 
-                    }
-                });
-            } else {
-                myEntry = db.ref('lobby').push(myId);
-                cancelBtn.onclick = () => resetSession();
-            }
-        });
-    } catch (err) { alert("Mic required."); startBtn.disabled = false; }
-});
-
-function showCallUI() {
-    isConnected = true; 
+function setupCall(stream) {
+    isConnected = true;
+    remoteAudio.srcObject = stream;
+    remoteAudio.play();
+    
     videoSide.classList.add('active');
     startBtn.style.display = "none";
     cancelBtn.style.display = "none";
     skipBtn.style.display = "block";
     timerDisplay.style.display = "block";
-    startTimer(120); 
-}
-
-// ATTACH SKIP RESET
-skipBtn.onclick = () => resetSession();
-
-function resetSession() {
-    // 1. Physically Stop Microphone Hardware
-    if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-    }
-    // 2. Kill Active Peer Connection
-    if (currentCall) {
-        currentCall.close();
-    }
-    // 3. Remove from Firebase Lobby if still there
-    if (myEntry) {
-        myEntry.remove();
-    }
-    // 4. Force hard reload to reset PeerID and state
-    location.reload();
-}
-
-function startTimer(seconds) {
-    let time = seconds;
-    clearInterval(timerInterval);
+    
+    let time = 120;
     timerInterval = setInterval(() => {
-        let mins = Math.floor(time / 60);
-        let secs = time % 60;
-        timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        if (--time < 0) { 
-            clearInterval(timerInterval); 
-            showRatingScreen(); 
-        }
+        let m = Math.floor(time/60), s = time%60;
+        timerDisplay.innerText = `${m}:${s<10?'0':''}${s}`;
+        if(--time < 0) { clearInterval(timerInterval); launchRating(); }
     }, 1000);
 }
-function showRatingScreen() {
+
+function launchRating() {
+    skipBtn.style.display = "none";
     document.getElementById('rating-screen').style.display = 'flex';
-    const groups = { 'hate-group': [1,2,3,4], 'rate-group': [5,6], 'like-group': [7,8,9,10] };
-    Object.keys(groups).forEach(groupId => {
-        const container = document.getElementById(groupId);
-        container.innerHTML = '';
-        groups[groupId].forEach(num => {
-            const b = document.createElement('button');
-            b.className = 'rate-btn'; b.innerText = num;
-            b.onclick = () => resetSession();
-            container.appendChild(b);
-        });
-    });
+    const grid = document.getElementById('rateGrid');
+    for(let i=1; i<=10; i++) {
+        const b = document.createElement('button');
+        b.className = 'rate-btn'; b.innerText = i;
+        b.onclick = () => terminateAndRefresh();
+        grid.appendChild(b);
+    }
 }
 
-function playStream(stream) {
-    const audio = new Audio();
-    audio.srcObject = stream; 
-    audio.autoplay = true;
-    document.body.appendChild(audio);
-}
-
-// Purge if user closes tab
+// Cleanup
 window.onbeforeunload = () => { if(myEntry) myEntry.remove(); };
 </script>
 </body>
