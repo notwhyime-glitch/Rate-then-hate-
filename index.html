@@ -26,7 +26,6 @@ height:100dvh;
 width:100vw;
 }
 
-/* LEFT VIDEO SIDE */
 .video-side{
 width:0;
 flex:0;
@@ -70,7 +69,6 @@ border-radius:50%;
 display:flex;
 justify-content:center;
 align-items:center;
-z-index:1;
 }
 
 .q-mark{
@@ -78,7 +76,6 @@ font-size:50px;
 font-weight:800;
 }
 
-/* RIGHT SIDE */
 .control-side{
 flex:1;
 display:flex;
@@ -126,11 +123,10 @@ margin-top:10px;
 display:none;
 }
 
-/* SKIP BUTTON */
 #skipBtn{
 display:none;
 position:fixed;
-bottom:calc(20px + env(safe-area-inset-bottom));
+bottom:20px;
 left:50%;
 transform:translateX(-50%);
 width:90%;
@@ -140,15 +136,9 @@ color:#fff;
 padding:20px;
 border:none;
 border-radius:18px;
-z-index:9999;
 font-weight:900;
 }
 
-#skipBtn.visible{
-display:block;
-}
-
-/* TIMER */
 #timer{
 font-size:2rem;
 color:var(--red);
@@ -156,7 +146,6 @@ display:none;
 margin-bottom:20px;
 }
 
-/* RATING */
 #rating-screen{
 position:fixed;
 inset:0;
@@ -182,29 +171,6 @@ border:1px solid #333;
 border-radius:10px;
 color:#fff;
 }
-
-/* MOBILE FIX */
-@media (max-width:768px){
-.app-wrapper{flex-direction:column;}
-
-.video-side{
-width:100%;
-min-height:50dvh;
-}
-
-.video-side.active{
-width:100%;
-border-right:none;
-border-bottom:1px solid #222;
-}
-
-.control-side{
-min-height:50dvh;
-padding-bottom:80px;
-}
-
-h1{font-size:3rem;}
-}
 </style>
 </head>
 
@@ -212,7 +178,6 @@ h1{font-size:3rem;}
 
 <div class="app-wrapper">
 
-<!-- VIDEO -->
 <div class="video-side" id="videoSide">
 <div class="user-slot">
 <video id="remoteVideo" autoplay playsinline></video>
@@ -225,7 +190,6 @@ h1{font-size:3rem;}
 </div>
 </div>
 
-<!-- UI -->
 <div class="control-side">
 <div class="container">
 
@@ -239,18 +203,17 @@ h1{font-size:3rem;}
 
 </div>
 </div>
+
 </div>
 
 <button id="skipBtn">SKIP / HATE</button>
 <audio id="remoteAudio" autoplay></audio>
 
-<!-- RATING -->
 <div id="rating-screen">
 <h1 id="ratingTitle">RATE THEM</h1>
 <div id="rateGrid" class="rate-grid"></div>
 </div>
 
-<!-- LIBS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -284,23 +247,17 @@ let timerInterval=null;
 
 peer.on('open',id=>myId=id);
 
-/* UI helpers */
+/* SEARCH UI */
 function setSearching(on){
 const btn=document.getElementById('startBtn');
 btn.classList.toggle('searching',on);
 btn.innerText=on?'SEARCHING...':'START MATCHING';
-document.getElementById('skipBtn').classList.toggle('visible',on);
-}
-
-function cleanup(){
-if(searchingInterval) clearInterval(searchingInterval);
-searchingInterval=null;
-if(lobbyEntry) lobbyEntry.remove().catch(()=>{});
-lobbyEntry=null;
+document.getElementById('skipBtn').style.display = on ? 'block' : 'none';
 }
 
 /* START */
 document.getElementById('startBtn').onclick=async()=>{
+
 if(searchingInterval) return;
 
 localStream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -310,6 +267,7 @@ setSearching(true);
 lobbyEntry=db.ref('lobby').push(myId);
 
 searchingInterval=setInterval(()=>{
+
 if(isConnected) return;
 
 db.ref('lobby').once('value',snap=>{
@@ -329,10 +287,12 @@ currentMatchId=[myId,pid].sort().join('_');
 
 startCall(peer.call(pid,localStream));
 });
+
 },2000);
+
 };
 
-/* INCOMING CALL */
+/* CALL HANDLING */
 peer.on('call',call=>{
 navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
 localStream=stream;
@@ -346,7 +306,6 @@ startCall(call);
 
 function startCall(call){
 isConnected=true;
-cleanup();
 setSearching(false);
 
 call.on('stream',s=>{
@@ -360,30 +319,39 @@ startSession(s);
 
 /* AUDIO PHASE */
 function startSession(stream){
-document.getElementById('remoteAudio').srcObject=stream;
 
+document.getElementById('remoteAudio').srcObject=stream;
 document.getElementById('videoSide').classList.add('active');
 document.getElementById('timer').style.display='block';
 
-document.getElementById('skipBtn').classList.add('visible');
+let endTime = Date.now() + 120000;
 
-let time=120;
+function updateTimer(){
+let remaining = endTime - Date.now();
 
-timerInterval=setInterval(()=>{
-let m=Math.floor(time/60);
-let s=time%60;
-
-document.getElementById('timer').innerText=`${m}:${s<10?'0':''}${s}`;
-
-if(--time<0){
+if(remaining <= 0){
 clearInterval(timerInterval);
+document.getElementById('timer').innerText = "0:00";
 showRating();
+return;
 }
-},1000);
+
+let totalSeconds = Math.floor(remaining / 1000);
+let m = Math.floor(totalSeconds / 60);
+let s = totalSeconds % 60;
+
+document.getElementById('timer').innerText =
+`${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+updateTimer();
+timerInterval = setInterval(updateTimer, 100);
+
 }
 
 /* RATING */
 function showRating(){
+
 document.getElementById('rating-screen').style.display='flex';
 
 const grid=document.getElementById('rateGrid');
@@ -396,25 +364,17 @@ b.innerText=i;
 
 b.onclick=()=>{
 db.ref('matches/'+currentMatchId+'/'+myId).set(i);
-document.getElementById('ratingTitle').innerText='WAITING...';
+document.getElementById('ratingTitle').innerText="WAITING...";
 grid.style.display='none';
 };
 
 grid.appendChild(b);
 }
+
 }
 
 /* SKIP */
 document.getElementById('skipBtn').onclick=()=>{
-if(currentMatchId){
-db.ref('matches/'+currentMatchId).remove().catch(()=>{});
-}
-location.reload();
-};
-
-document.getElementById('cancelBtn').onclick=()=>{
-cleanup();
-setSearching(false);
 location.reload();
 };
 
