@@ -18,33 +18,65 @@ overflow:hidden;
 .app-wrapper{display:flex;height:100dvh;width:100vw;}
 
 .video-side{
-width:0;flex:0;display:flex;flex-direction:column;
-background:#000;opacity:0;transition:.5s;overflow:hidden;
+width:0;
+flex:0;
+display:flex;
+flex-direction:column;
+background:#000;
+opacity:0;
+transition:.5s;
+overflow:hidden;
 }
 
 .video-side.active{
-width:60vw;flex:1.5;opacity:1;border-right:1px solid #222;
+width:60vw;
+flex:1.5;
+opacity:1;
+border-right:1px solid #222;
 }
 
 .user-slot{
-flex:1;display:flex;justify-content:center;align-items:center;
-background:#050505;position:relative;
+flex:1;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#050505;
+position:relative;
+overflow:hidden;
 }
 
-video{
-width:100%;height:100%;object-fit:cover;
-position:absolute;inset:0;
+/* FULL RECTANGLE VIDEO */
+.user-slot video{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+z-index:2;
 }
 
 .camera-placeholder{
-width:100px;height:100px;border:2px solid #fff;
-border-radius:50%;display:flex;justify-content:center;align-items:center;
+position:absolute;
+inset:0;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:3;
+transition:opacity .25s ease;
+font-size:50px;
+font-weight:800;
 }
 
-.q-mark{font-size:50px;font-weight:800;}
+.user-slot.revealed .camera-placeholder{
+opacity:0;
+pointer-events:none;
+}
 
 .control-side{
-flex:1;display:flex;justify-content:center;align-items:center;
+flex:1;
+display:flex;
+justify-content:center;
+align-items:center;
 background:var(--panel);
 }
 
@@ -55,39 +87,71 @@ h1{font-size:4rem;margin:0;}
 .tagline{color:#666;margin-bottom:40px;}
 
 .main-btn{
-background:#fff;color:#000;padding:20px;
-border:none;border-radius:16px;width:100%;
-font-weight:800;cursor:pointer;
+background:#fff;
+color:#000;
+padding:20px;
+border:none;
+border-radius:16px;
+width:100%;
+font-weight:800;
+cursor:pointer;
+}
+
+#startBtn.searching{
+background:var(--green);
+color:#000;
 }
 
 #skipBtn{
-display:none;position:fixed;bottom:20px;left:50%;
+display:none;
+position:fixed;
+bottom:20px;
+left:50%;
 transform:translateX(-50%);
-width:90%;max-width:340px;
-background:var(--red);color:#fff;
-padding:20px;border:none;border-radius:18px;font-weight:900;
+width:90%;
+max-width:340px;
+background:var(--red);
+color:#fff;
+padding:20px;
+border:none;
+border-radius:18px;
+font-weight:900;
 }
 
-#timer{font-size:2rem;color:var(--red);display:none;margin-bottom:20px;}
+#timer{
+font-size:2rem;
+color:var(--red);
+display:none;
+margin-bottom:20px;
+}
 
 #rating-screen{
-position:fixed;inset:0;background:#000;
-display:none;flex-direction:column;
-justify-content:center;align-items:center;
+position:fixed;
+inset:0;
+background:#000;
+display:none;
+flex-direction:column;
+justify-content:center;
+align-items:center;
 }
 
 .rate-grid{
 display:grid;
 grid-template-columns:repeat(5,1fr);
-gap:10px;width:100%;margin-top:20px;
+gap:10px;
+width:100%;
+margin-top:20px;
 }
 
 .rate-btn{
-padding:20px;background:#111;
-border:1px solid #333;border-radius:10px;color:#fff;
+padding:20px;
+background:#111;
+border:1px solid #333;
+border-radius:10px;
+color:#fff;
 }
 
-/* 🟢 reveal countdown */
+/* REVEAL COUNTDOWN */
 #reveal{
 position:fixed;
 inset:0;
@@ -110,15 +174,17 @@ z-index:9999;
 <div class="app-wrapper">
 
 <div class="video-side" id="videoSide">
+
 <div class="user-slot">
 <video id="remoteVideo" autoplay playsinline></video>
-<div class="camera-placeholder"><span class="q-mark">?</span></div>
+<div class="camera-placeholder">?</div>
 </div>
 
 <div class="user-slot">
 <video id="localVideo" autoplay playsinline muted></video>
-<div class="camera-placeholder"><span class="q-mark">?</span></div>
+<div class="camera-placeholder">?</div>
 </div>
+
 </div>
 
 <div class="control-side">
@@ -165,53 +231,26 @@ const peer = new Peer();
 let myId, localStream, partnerPeerId, currentMatchId;
 let currentCall = null;
 
+let phase = "idle";
+let timerInterval = null;
+
 let ratingTimer=null;
 let ratingCountdown=10;
 let ratingSelected=false;
 
-let isMutedPhase=false;
+/* ---------- STATE HELPERS ---------- */
 
-/* 🔇 MUTE SYSTEM */
-function setMutedState(state){
-
-isMutedPhase = state;
-
-/* local mic */
-if(localStream){
-localStream.getAudioTracks().forEach(t=>{
-t.enabled = !state;
-});
+function revealVideoSlots(){
+document.querySelectorAll('.user-slot')
+.forEach(s => s.classList.add('revealed'));
 }
 
-/* remote audio */
-const ra = document.getElementById('remoteAudio');
-ra.muted = state;
-ra.volume = state ? 0 : 1;
-}
-
-/* 🟢 REVEAL COUNTDOWN */
-function startReveal(cb){
-const el=document.getElementById('reveal');
-let t=3;
-
-el.style.display='flex';
-el.innerText=t;
-
-const iv=setInterval(()=>{
-t--;
-if(t<=0){
-clearInterval(iv);
-el.style.display='none';
-cb();
-return;
-}
-el.innerText=t;
-},1000);
-}
+/* ---------- PEER ---------- */
 
 peer.on('open',id=>myId=id);
 
-/* START */
+/* ---------- START MATCH ---------- */
+
 document.getElementById('startBtn').onclick=async()=>{
 
 localStream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -237,11 +276,13 @@ currentMatchId=[myId,pid].sort().join('_');
 startCall(peer.call(pid,localStream));
 
 });
+
 },2000);
 
 };
 
-/* CALL HANDLING */
+/* ---------- CALL ---------- */
+
 peer.on('call',call=>{
 navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
 localStream=stream;
@@ -254,6 +295,7 @@ startCall(call);
 });
 
 function startCall(call){
+
 currentCall = call;
 
 call.on('stream',s=>{
@@ -265,10 +307,15 @@ startSession(s);
 });
 
 call.on('close',()=>location.reload());
+call.on('error',()=>location.reload());
+
 }
 
-/* AUDIO PHASE */
+/* ---------- AUDIO PHASE ---------- */
+
 function startSession(stream){
+
+phase="session";
 
 document.getElementById('remoteAudio').srcObject=stream;
 document.getElementById('videoSide').classList.add('active');
@@ -277,8 +324,12 @@ document.getElementById('timer').style.display='block';
 let end=Date.now()+120000;
 
 function tick(){
+
 let r=end-Date.now();
-if(r<=0){showRating();return;}
+if(r<=0){
+showRating();
+return;
+}
 
 let t=Math.floor(r/1000);
 document.getElementById('timer').innerText=
@@ -286,13 +337,15 @@ document.getElementById('timer').innerText=
 }
 
 tick();
-setInterval(tick,250);
+timerInterval=setInterval(tick,250);
+
 }
 
-/* 🔴 RATING PHASE */
+/* ---------- RATING ---------- */
+
 function showRating(){
 
-setMutedState(true); // 🔇 MUTE BOTH USERS
+phase="rating";
 
 document.getElementById('rating-screen').style.display='flex';
 
@@ -301,12 +354,9 @@ const title=document.getElementById('ratingTitle');
 
 grid.innerHTML='';
 
-if(ratingTimer) clearInterval(ratingTimer);
-
 ratingCountdown=10;
 ratingSelected=false;
 
-grid.style.display='grid';
 title.style.color="red";
 title.innerText="RATE THEM (10)";
 
@@ -337,12 +387,15 @@ grid.appendChild(b);
 
 }
 
-/* AFTER RATING */
+/* ---------- FINISH RATING ---------- */
+
 function finishRating(val){
 
-if(ratingSelected) return;
-ratingSelected=true;
+if(phase!=="rating") return;
 
+phase="reveal";
+
+ratingSelected=true;
 clearInterval(ratingTimer);
 
 db.ref('matches/'+currentMatchId+'/'+myId).set(val);
@@ -350,31 +403,74 @@ db.ref('matches/'+currentMatchId+'/'+myId).set(val);
 document.getElementById('ratingTitle').innerText="PREPARING REVEAL...";
 document.getElementById('rateGrid').style.display='none';
 
+/* safety fallback */
+setTimeout(()=>{
+if(phase==="reveal"){
+upgradeToVideo();
+}
+},6000);
+
 startReveal(()=>{
 upgradeToVideo();
-setMutedState(false); // 🔊 UNMUTE AFTER REVEAL
 });
+
 }
 
-/* 🎥 UPGRADE SAME CALL */
+/* ---------- REVEAL COUNTDOWN ---------- */
+
+function startReveal(cb){
+
+const el=document.getElementById('reveal');
+let t=3;
+
+el.style.display='flex';
+el.innerText=t;
+
+const iv=setInterval(()=>{
+
+t--;
+
+if(t<=0){
+clearInterval(iv);
+el.style.display='none';
+cb();
+return;
+}
+
+el.innerText=t;
+
+},1000);
+
+}
+
+/* ---------- VIDEO UPGRADE ---------- */
+
 async function upgradeToVideo(){
+
+phase="video";
 
 const stream = await navigator.mediaDevices.getUserMedia({
 audio:true,
 video:true
 });
 
-const videoTrack = stream.getVideoTracks()[0];
+document.getElementById('localVideo').srcObject = stream;
 
-const sender = currentCall?.peerConnection
-?.getSenders?.()
-?.find(s=>s.track && s.track.kind==="video");
+/* FULL RECTANGLE REVEAL */
+revealVideoSlots();
+
+if(currentCall?.peerConnection){
+
+const sender = currentCall.peerConnection
+.getSenders?.()
+.find(s => s.track && s.track.kind === "video");
 
 if(sender){
-sender.replaceTrack(videoTrack);
+sender.replaceTrack(stream.getVideoTracks()[0]);
 }
 
-document.getElementById('localVideo').srcObject = stream;
+}
+
 }
 
 document.getElementById('skipBtn').onclick=()=>location.reload();
