@@ -303,7 +303,7 @@ async function handleIncomingCall(call){
   call.answer(localStream);
   listenForPartnerSignals();
   handleCall(call);
-});
+}
 
 /* ── INITIATE CALL ── */
 function initiateCall(){
@@ -472,3 +472,5 @@ function reset(){
 </script>
 </body>
 </html>
+
+
