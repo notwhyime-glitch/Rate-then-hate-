@@ -56,7 +56,7 @@
         <div class="rate-grid" id="rateGrid"></div>
     </div>
 
-    <!-- FIXED SCRIPT LINKS -->
+    <!-- BRAIN SCRIPTS -->
     <script src="https://unpkg.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
@@ -114,7 +114,7 @@
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
                 partnerPeerId = call.peer;
-                currentMatchId = myId < partnerPeerId ? myId + "_" + partnerPeerId : partnerPeerId + "_" + myId;
+                currentMatchId = partnerPeerId < myId ? partnerPeerId + "_" + myId : myId + "_" + partnerPeerId;
                 call.answer(stream);
                 setupCallHandlers(call);
             });
