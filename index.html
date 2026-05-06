@@ -7,22 +7,32 @@
     <style>
         :root { --red: #ff3b30; --bg: #000; --panel: #0a0a0a; }
         body, html { margin: 0; padding: 0; height: 100vh; width: 100vw; background-color: var(--bg); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; touch-action: none; }
+        
         .app-wrapper { display: flex; height: 100vh; width: 100vw; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .video-side { width: 0; flex: 0; display: flex; flex-direction: column; background: #000; overflow: hidden; opacity: 0; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid #222; }
+        
+        /* Fixed Video Side: pointer-events none ensures buttons underneath are clickable when it's closed */
+        .video-side { width: 0; flex: 0; display: flex; flex-direction: column; background: #000; overflow: hidden; opacity: 0; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; }
+        .video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid #222; pointer-events: auto; }
+        
         .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 2; background: black; }
+        
         .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 1; }
         .q-mark { font-size: 50px; font-weight: 800; }
+        
         .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .container { text-align: center; padding: 20px; width: 85%; max-width: 400px; }
+        
         h1 { font-weight: 900; font-size: 4rem; margin: 0; letter-spacing: -3px; }
         .tagline { color: #666; margin-bottom: 50px; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; }
-        .main-btn { background: #fff; color: #000; border: none; padding: 22px; font-size: 1.2rem; font-weight: 800; border-radius: 16px; width: 100%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        
+        .main-btn { background: #fff; color: #000; border: none; padding: 22px; font-size: 1.2rem; font-weight: 800; border-radius: 16px; width: 100%; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; z-index: 10; }
         #cancelBtn { background: #222; color: #fff; margin-top: 15px; display: none; }
         #skipBtn { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; background: var(--red); color: white; padding: 22px; font-size: 1.2rem; font-weight: 900; border-radius: 18px; border: none; z-index: 9999; box-shadow: 0 15px 45px rgba(255, 59, 48, 0.4); }
+        
         #timer { font-family: monospace; font-size: 2rem; color: var(--red); margin-bottom: 20px; display: none; font-weight: bold; }
-        #rating-screen { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; padding: 20px; }
+        
+        #rating-screen { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10001; padding: 20px; }
         .rate-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin-top: 25px; }
         .rate-btn { padding: 20px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; font-weight: bold; }
     </style>
@@ -51,14 +61,17 @@
     </div>
     <button id="skipBtn">SKIP / HATE</button>
     <audio id="remoteAudio" autoplay playsinline></audio>
+    
     <div id="rating-screen">
         <h1 id="ratingTitle" style="font-size: 2.5rem;">RATE THEM</h1>
         <div class="rate-grid" id="rateGrid"></div>
     </div>
 
+    <!-- FIXED SCRIPTS -->
     <script src="https://unpkg.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
+
     <script>
         const firebaseConfig = { 
             apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA", 
@@ -68,25 +81,27 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        
+        // FIXED STUN SERVER
         const peer = new Peer({ config: { 'iceServers': [{ url: 'stun:://google.com' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }] }});
 
         let localStream, myId, myEntry, timerInterval, currentCall, searchingInterval, partnerPeerId, currentMatchId;
         let isConnected = false;
 
-        peer.on('open', id => myId = id);
+        peer.on('open', id => { myId = id; console.log("My Peer ID:", id); });
 
         function terminateAndRefresh() {
             if (currentMatchId) db.ref('matches/' + currentMatchId).remove();
             window.location.reload();
         }
 
-        skipBtn.onclick = terminateAndRefresh;
+        document.getElementById('skipBtn').onclick = terminateAndRefresh;
 
-        startBtn.onclick = async () => {
+        document.getElementById('startBtn').onclick = async () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                startBtn.innerText = "SEARCHING...";
-                cancelBtn.style.display = "block";
+                document.getElementById('startBtn').innerText = "SEARCHING...";
+                document.getElementById('cancelBtn').style.display = "block";
                 myEntry = db.ref('lobby').push(myId);
 
                 searchingInterval = setInterval(() => {
@@ -105,7 +120,7 @@
                         }
                     });
                 }, 3000);
-            } catch(e) { alert("Mic required."); }
+            } catch(e) { alert("Mic required for matching."); }
         };
 
         peer.on('call', call => {
@@ -179,7 +194,7 @@
                 localStream = vidStream;
                 document.getElementById('localVideo').srcObject = localStream;
                 peer.call(partnerPeerId, localStream);
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("Reveal Error:", e); }
         }
     </script>
 </body>
