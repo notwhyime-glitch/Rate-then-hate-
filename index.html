@@ -234,6 +234,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
 const peer = new Peer();
 
 let myId = null;
@@ -242,7 +243,7 @@ let partnerPeerId = null;
 let currentMatchId = null;
 let currentCall = null;
 
-let phase = "idle"; // idle -> searching -> connecting -> session -> rating -> reveal -> video
+let phase = "idle";
 let timerInterval = null;
 let searchInterval = null;
 let ratingTimer = null;
@@ -253,11 +254,34 @@ let ratingCountdown = 10;
 let ratingSelected = false;
 let videoUpgraded = false;
 let lobbyEntryRef = null;
-let searchTextInterval = null;
 
 peer.on('open', id => {
   myId = id;
 });
+
+peer.on('disconnected', () => {
+  try {
+    peer.reconnect();
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+peer.on('error', () => {
+  hardReset();
+});
+
+function revealVideoSlots() {
+  document.querySelectorAll('.user-slot').forEach(s => s.classList.add('revealed'));
+}
+
+function resetUI() {
+  document.getElementById('rating-screen').style.display = 'none';
+  document.getElementById('rateGrid').style.display = 'grid';
+  document.getElementById('ratingTitle').innerText = 'RATE THEM';
+  document.getElementById('ratingTitle').style.color = '#fff';
+  document.getElementById('reveal').style.display = 'none';
+}
 
 function setSearchUI(on) {
   const btn = document.getElementById('startBtn');
@@ -296,18 +320,6 @@ function clearSessionTimers() {
   }
 }
 
-function resetUI() {
-  document.getElementById('rating-screen').style.display = 'none';
-  document.getElementById('rateGrid').style.display = 'grid';
-  document.getElementById('ratingTitle').innerText = 'RATE THEM';
-  document.getElementById('ratingTitle').style.color = '#fff';
-  document.getElementById('reveal').style.display = 'none';
-}
-
-function revealVideoSlots() {
-  document.querySelectorAll('.user-slot').forEach(s => s.classList.add('revealed'));
-}
-
 function setMutedState(state) {
   if (localStream) {
     localStream.getAudioTracks().forEach(t => {
@@ -324,6 +336,40 @@ function cleanupAll() {
   clearSearchLoop();
   clearSessionTimers();
   setMutedState(false);
+
+  try {
+    currentCall?.close();
+  } catch (e) {}
+
+  currentCall = null;
+  phase = "idle";
+}
+
+function hardReset() {
+  try {
+    if (lobbyEntryRef) {
+      lobbyEntryRef.remove();
+    }
+  } catch (e) {}
+
+  try {
+    db.ref('lobby').once('value', snap => {
+      const users = snap.val();
+      if (!users) return;
+
+      Object.keys(users).forEach(k => {
+        if (users[k] === myId) {
+          db.ref('lobby/' + k).remove().catch(() => {});
+        }
+      });
+    });
+  } catch (e) {}
+
+  cleanupAll();
+
+  setTimeout(() => {
+    location.reload();
+  }, 300);
 }
 
 document.getElementById('startBtn').onclick = async () => {
@@ -340,7 +386,9 @@ document.getElementById('startBtn').onclick = async () => {
   phase = "searching";
   setSearchUI(true);
 
-  lobbyEntryRef = db.ref('lobby').push(myId);
+  if (!lobbyEntryRef) {
+    lobbyEntryRef = db.ref('lobby').push(myId);
+  }
 
   searchInterval = setInterval(() => {
     if (phase !== "searching") return;
@@ -368,12 +416,12 @@ document.getElementById('startBtn').onclick = async () => {
 
 peer.on('call', call => {
   if (phase === "rating" || phase === "reveal" || phase === "video") {
-    try { call.close(); } catch {}
+    try { call.close(); } catch (e) {}
     return;
   }
 
   if (!myId) {
-    try { call.close(); } catch {}
+    try { call.close(); } catch (e) {}
     return;
   }
 
@@ -388,12 +436,11 @@ peer.on('call', call => {
     call.answer(stream);
     startCall(call);
   }).catch(() => {
-    try { call.close(); } catch {}
+    try { call.close(); } catch (e) {}
   });
 });
 
 function startCall(call) {
-  if (currentCall) return;
   currentCall = call;
 
   call.on('stream', s => {
@@ -413,13 +460,8 @@ function startCall(call) {
     }
   });
 
-  call.on('close', teardownAndReload);
-  call.on('error', teardownAndReload);
-}
-
-function teardownAndReload() {
-  cleanupAll();
-  location.reload();
+  call.on('close', hardReset);
+  call.on('error', hardReset);
 }
 
 function startSession(stream) {
@@ -449,16 +491,6 @@ function startSession(stream) {
 
   tick();
   timerInterval = setInterval(tick, 250);
-}
-
-function setRevealCountdown(text) {
-  const el = document.getElementById('reveal');
-  el.style.display = 'flex';
-  el.innerText = text;
-}
-
-function hideRevealCountdown() {
-  document.getElementById('reveal').style.display = 'none';
 }
 
 function showRating() {
@@ -548,6 +580,16 @@ function finishRating(val) {
   }, 6000);
 }
 
+function setRevealCountdown(text) {
+  const el = document.getElementById('reveal');
+  el.style.display = 'flex';
+  el.innerText = text;
+}
+
+function hideRevealCountdown() {
+  document.getElementById('reveal').style.display = 'none';
+}
+
 function completeReveal() {
   if (videoUpgraded) return;
   videoUpgraded = true;
@@ -580,12 +622,12 @@ async function upgradeToVideo() {
         if (videoSender && typeof videoSender.replaceTrack === 'function') {
           await videoSender.replaceTrack(videoTrack);
         } else if (typeof pc.addTrack === 'function') {
-          try { pc.addTrack(videoTrack, stream); } catch {}
+          try { pc.addTrack(videoTrack, stream); } catch (e) {}
         }
       }
 
       if (audioTrack && !audioSender && typeof pc.addTrack === 'function') {
-        try { pc.addTrack(audioTrack, stream); } catch {}
+        try { pc.addTrack(audioTrack, stream); } catch (e) {}
       }
     }
 
@@ -599,7 +641,7 @@ async function upgradeToVideo() {
   }
 }
 
-document.getElementById('skipBtn').onclick = teardownAndReload;
+document.getElementById('skipBtn').onclick = hardReset;
 window.addEventListener('beforeunload', cleanupAll);
 </script>
 
