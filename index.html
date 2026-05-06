@@ -133,6 +133,7 @@ padding:20px;
 border:none;
 border-radius:18px;
 font-weight:900;
+z-index:9998;
 }
 
 #timer{
@@ -150,6 +151,7 @@ display:none;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+z-index:9997;
 }
 
 .rate-grid{
@@ -188,40 +190,34 @@ z-index:9999;
 <div id="reveal">3</div>
 
 <div class="app-wrapper">
+  <div class="video-side" id="videoSide">
+    <div class="user-slot">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="camera-placeholder">?</div>
+    </div>
 
-<div class="video-side" id="videoSide">
-<div class="user-slot">
-<video id="remoteVideo" autoplay playsinline></video>
-<div class="camera-placeholder">?</div>
-</div>
+    <div class="user-slot">
+      <video id="localVideo" autoplay playsinline muted></video>
+      <div class="camera-placeholder">?</div>
+    </div>
+  </div>
 
-<div class="user-slot">
-<video id="localVideo" autoplay playsinline muted></video>
-<div class="camera-placeholder">?</div>
-</div>
-</div>
-
-<div class="control-side">
-<div class="container">
-
-<div id="timer">02:00</div>
-
-<h1>Rathe</h1>
-<p class="tagline">rate then hate.</p>
-
-<button id="startBtn" class="main-btn">START MATCHING</button>
-
-</div>
-</div>
-
+  <div class="control-side">
+    <div class="container">
+      <div id="timer">02:00</div>
+      <h1>Rathe</h1>
+      <p class="tagline">rate then hate.</p>
+      <button id="startBtn" class="main-btn">START MATCHING</button>
+    </div>
+  </div>
 </div>
 
 <button id="skipBtn">SKIP / HATE</button>
 <audio id="remoteAudio" autoplay></audio>
 
 <div id="rating-screen">
-<h1 id="ratingTitle">RATE THEM</h1>
-<div id="rateGrid" class="rate-grid"></div>
+  <h1 id="ratingTitle">RATE THEM</h1>
+  <div id="rateGrid" class="rate-grid"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -229,299 +225,382 @@ z-index:9999;
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <script>
-
 const firebaseConfig = {
-apiKey: "AIzaSyC...",
-databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
-projectId: "rate-then-hate-backend",
-appId: "1:195653571803:web:6482704037cb0f2835e8fe"
+  apiKey: "AIzaSyC...",
+  databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
+  projectId: "rate-then-hate-backend",
+  appId: "1:195653571803:web:6482704037cb0f2835e8fe"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 const peer = new Peer();
 
-let myId, localStream, partnerPeerId, currentMatchId;
+let myId = null;
+let localStream = null;
+let partnerPeerId = null;
+let currentMatchId = null;
 let currentCall = null;
 
-let phase = "idle";
+let phase = "idle"; // idle -> searching -> connecting -> session -> rating -> reveal -> video
 let timerInterval = null;
 let searchInterval = null;
-
 let ratingTimer = null;
+let revealTimer = null;
+let revealSafetyTimer = null;
+
 let ratingCountdown = 10;
 let ratingSelected = false;
-
 let videoUpgraded = false;
+let lobbyEntryRef = null;
+let searchTextInterval = null;
 
-/* ---------- STATE HELPERS ---------- */
+peer.on('open', id => {
+  myId = id;
+});
 
-function revealVideoSlots(){
-document.querySelectorAll('.user-slot')
-.forEach(s => s.classList.add('revealed'));
+function setSearchUI(on) {
+  const btn = document.getElementById('startBtn');
+  btn.classList.toggle('searching', on);
+  btn.innerText = on ? 'SEARCHING...' : 'START MATCHING';
+  document.getElementById('skipBtn').style.display = on ? 'block' : 'none';
 }
 
-function resetUI(){
-document.getElementById('rating-screen').style.display = 'none';
-document.getElementById('rateGrid').style.display = 'grid';
-document.getElementById('ratingTitle').innerText = 'RATE THEM';
-document.getElementById('ratingTitle').style.color = '#fff';
-document.getElementById('reveal').style.display = 'none';
+function clearSearchLoop() {
+  if (searchInterval) {
+    clearInterval(searchInterval);
+    searchInterval = null;
+  }
+  if (lobbyEntryRef) {
+    lobbyEntryRef.remove().catch(() => {});
+    lobbyEntryRef = null;
+  }
 }
 
-/* ---------- PEER ---------- */
+function clearSessionTimers() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  if (ratingTimer) {
+    clearInterval(ratingTimer);
+    ratingTimer = null;
+  }
+  if (revealTimer) {
+    clearInterval(revealTimer);
+    revealTimer = null;
+  }
+  if (revealSafetyTimer) {
+    clearTimeout(revealSafetyTimer);
+    revealSafetyTimer = null;
+  }
+}
 
-peer.on('open', id => myId = id);
+function resetUI() {
+  document.getElementById('rating-screen').style.display = 'none';
+  document.getElementById('rateGrid').style.display = 'grid';
+  document.getElementById('ratingTitle').innerText = 'RATE THEM';
+  document.getElementById('ratingTitle').style.color = '#fff';
+  document.getElementById('reveal').style.display = 'none';
+}
 
-/* ---------- START MATCH ---------- */
+function revealVideoSlots() {
+  document.querySelectorAll('.user-slot').forEach(s => s.classList.add('revealed'));
+}
+
+function setMutedState(state) {
+  if (localStream) {
+    localStream.getAudioTracks().forEach(t => {
+      t.enabled = !state;
+    });
+  }
+
+  const ra = document.getElementById('remoteAudio');
+  ra.muted = state;
+  ra.volume = state ? 0 : 1;
+}
+
+function cleanupAll() {
+  clearSearchLoop();
+  clearSessionTimers();
+  setMutedState(false);
+}
 
 document.getElementById('startBtn').onclick = async () => {
+  if (searchInterval || phase !== "idle") return;
+  if (!myId) return;
 
-if(searchInterval) return;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    alert("Mic required.");
+    return;
+  }
 
-localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  phase = "searching";
+  setSearchUI(true);
 
-db.ref('lobby').push(myId);
+  lobbyEntryRef = db.ref('lobby').push(myId);
 
-searchInterval = setInterval(() => {
+  searchInterval = setInterval(() => {
+    if (phase !== "searching") return;
 
-db.ref('lobby').once('value', snap => {
-const users = snap.val();
-if(!users) return;
+    db.ref('lobby').once('value', snap => {
+      const users = snap.val();
+      if (!users) return;
 
-const key = Object.keys(users).find(k => users[k] !== myId);
-if(!key) return;
+      const key = Object.keys(users).find(k => users[k] !== myId);
+      if (!key) return;
 
-const pid = users[key];
-if(pid === myId) return;
+      const pid = users[key];
+      if (!pid || pid === myId) return;
 
-clearInterval(searchInterval);
-searchInterval = null;
+      clearSearchLoop();
 
-db.ref('lobby/' + key).remove();
+      partnerPeerId = pid;
+      currentMatchId = [myId, pid].sort().join('_');
 
-partnerPeerId = pid;
-currentMatchId = [myId, pid].sort().join('_');
-
-startCall(peer.call(pid, localStream));
-});
-
-}, 2000);
-
+      phase = "connecting";
+      startCall(peer.call(pid, localStream));
+    });
+  }, 2000);
 };
 
-/* ---------- CALL ---------- */
-
 peer.on('call', call => {
-navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-localStream = stream;
-partnerPeerId = call.peer;
-currentMatchId = [myId, partnerPeerId].sort().join('_');
+  if (phase === "rating" || phase === "reveal" || phase === "video") {
+    try { call.close(); } catch {}
+    return;
+  }
 
-call.answer(stream);
-startCall(call);
-});
-});
+  if (!myId) {
+    try { call.close(); } catch {}
+    return;
+  }
 
-function startCall(call){
+  clearSearchLoop();
 
-currentCall = call;
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    localStream = stream;
+    partnerPeerId = call.peer;
+    currentMatchId = [myId, partnerPeerId].sort().join('_');
 
-call.on('stream', s => {
-if(s.getVideoTracks().length){
-document.getElementById('remoteVideo').srcObject = s;
-}else{
-startSession(s);
-}
-});
-
-call.on('close', () => location.reload());
-call.on('error', () => location.reload());
-
-}
-
-/* ---------- AUDIO PHASE ---------- */
-
-function startSession(stream){
-
-phase = "session";
-
-document.getElementById('remoteAudio').srcObject = stream;
-document.getElementById('videoSide').classList.add('active');
-document.getElementById('timer').style.display = 'block';
-
-let end = Date.now() + 120000;
-
-function tick(){
-
-let r = end - Date.now();
-if(r <= 0){
-clearInterval(timerInterval);
-timerInterval = null;
-showRating();
-return;
-}
-
-let t = Math.floor(r / 1000);
-document.getElementById('timer').innerText =
-`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-}
-
-tick();
-timerInterval = setInterval(tick, 250);
-
-}
-
-/* ---------- RATING ---------- */
-
-function showRating(){
-
-phase = "rating";
-
-document.getElementById('rating-screen').style.display = 'flex';
-
-const grid = document.getElementById('rateGrid');
-const title = document.getElementById('ratingTitle');
-
-grid.innerHTML = '';
-
-if(ratingTimer) clearInterval(ratingTimer);
-
-ratingCountdown = 10;
-ratingSelected = false;
-videoUpgraded = false;
-
-title.style.color = "red";
-title.innerText = "RATE THEM (10)";
-
-ratingTimer = setInterval(() => {
-
-if(ratingSelected) return;
-
-ratingCountdown--;
-
-if(ratingCountdown <= 0){
-finishRating(5);
-return;
-}
-
-title.innerText = `RATE THEM (${ratingCountdown})`;
-
-}, 1000);
-
-for(let i = 1; i <= 10; i++){
-const b = document.createElement('button');
-b.className = 'rate-btn';
-b.innerText = i;
-
-b.onclick = () => finishRating(i);
-
-grid.appendChild(b);
-}
-
-}
-
-/* ---------- FINISH RATING ---------- */
-
-function finishRating(val){
-
-if(phase !== "rating") return;
-
-phase = "reveal";
-ratingSelected = true;
-
-if(ratingTimer){
-clearInterval(ratingTimer);
-ratingTimer = null;
-}
-
-db.ref('matches/' + currentMatchId + '/' + myId).set(val);
-
-document.getElementById('ratingTitle').innerText = "PREPARING REVEAL...";
-document.getElementById('rateGrid').style.display = 'none';
-
-setTimeout(() => {
-if(phase === "reveal" && !videoUpgraded){
-upgradeToVideo();
-}
-}, 6000);
-
-startReveal(async () => {
-await upgradeToVideo();
+    phase = "connecting";
+    call.answer(stream);
+    startCall(call);
+  }).catch(() => {
+    try { call.close(); } catch {}
+  });
 });
 
+function startCall(call) {
+  if (currentCall) return;
+  currentCall = call;
+
+  call.on('stream', s => {
+    const hasVideo = s.getVideoTracks && s.getVideoTracks().length > 0;
+
+    if (hasVideo) {
+      document.getElementById('remoteVideo').srcObject = s;
+      document.getElementById('videoSide').classList.add('active');
+      revealVideoSlots();
+      return;
+    }
+
+    if (phase === "connecting" || phase === "searching") {
+      startSession(s);
+    } else {
+      document.getElementById('remoteAudio').srcObject = s;
+    }
+  });
+
+  call.on('close', teardownAndReload);
+  call.on('error', teardownAndReload);
 }
 
-/* ---------- REVEAL COUNTDOWN ---------- */
-
-function startReveal(cb){
-
-const el = document.getElementById('reveal');
-let t = 3;
-
-el.style.display = 'flex';
-el.innerText = t;
-
-const iv = setInterval(() => {
-
-t--;
-
-if(t <= 0){
-clearInterval(iv);
-el.style.display = 'none';
-cb();
-return;
+function teardownAndReload() {
+  cleanupAll();
+  location.reload();
 }
 
-el.innerText = t;
+function startSession(stream) {
+  if (phase === "session" || phase === "rating" || phase === "reveal" || phase === "video") return;
 
-}, 1000);
+  phase = "session";
+  document.getElementById('remoteAudio').srcObject = stream;
+  document.getElementById('videoSide').classList.add('active');
+  document.getElementById('timer').style.display = 'block';
+  document.getElementById('skipBtn').style.display = 'block';
 
+  let end = Date.now() + 120000;
+
+  const tick = () => {
+    const r = end - Date.now();
+    if (r <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      showRating();
+      return;
+    }
+
+    const t = Math.floor(r / 1000);
+    document.getElementById('timer').innerText =
+      `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  };
+
+  tick();
+  timerInterval = setInterval(tick, 250);
 }
 
-/* ---------- VIDEO UPGRADE ---------- */
-
-async function upgradeToVideo(){
-
-if(videoUpgraded) return;
-videoUpgraded = true;
-
-phase = "video";
-
-try{
-const stream = await navigator.mediaDevices.getUserMedia({
-audio: true,
-video: true
-});
-
-document.getElementById('localVideo').srcObject = stream;
-revealVideoSlots();
-
-if(currentCall?.peerConnection){
-
-const sender = currentCall.peerConnection
-.getSenders?.()
-.find(s => s.track && s.track.kind === 'video');
-
-if(sender && stream.getVideoTracks()[0]){
-sender.replaceTrack(stream.getVideoTracks()[0]);
+function setRevealCountdown(text) {
+  const el = document.getElementById('reveal');
+  el.style.display = 'flex';
+  el.innerText = text;
 }
 
+function hideRevealCountdown() {
+  document.getElementById('reveal').style.display = 'none';
 }
 
-resetUI();
+function showRating() {
+  if (phase !== "session") return;
 
-}catch(err){
-console.error("Video upgrade failed:", err);
-revealVideoSlots();
-resetUI();
+  phase = "rating";
+  setMutedState(true);
+
+  document.getElementById('rating-screen').style.display = 'flex';
+
+  const grid = document.getElementById('rateGrid');
+  const title = document.getElementById('ratingTitle');
+
+  grid.innerHTML = '';
+
+  if (ratingTimer) clearInterval(ratingTimer);
+
+  ratingCountdown = 10;
+  ratingSelected = false;
+  videoUpgraded = false;
+
+  title.style.color = "red";
+  title.innerText = "RATE THEM (10)";
+  grid.style.display = 'grid';
+
+  ratingTimer = setInterval(() => {
+    if (ratingSelected) return;
+
+    ratingCountdown--;
+
+    if (ratingCountdown <= 0) {
+      finishRating(5);
+      return;
+    }
+
+    title.innerText = `RATE THEM (${ratingCountdown})`;
+  }, 1000);
+
+  for (let i = 1; i <= 10; i++) {
+    const b = document.createElement('button');
+    b.className = 'rate-btn';
+    b.innerText = i;
+    b.onclick = () => finishRating(i);
+    grid.appendChild(b);
+  }
 }
 
+function finishRating(val) {
+  if (phase !== "rating") return;
+
+  phase = "reveal";
+  ratingSelected = true;
+
+  if (ratingTimer) {
+    clearInterval(ratingTimer);
+    ratingTimer = null;
+  }
+
+  db.ref('matches/' + currentMatchId + '/' + myId).set(val).catch(() => {});
+
+  document.getElementById('ratingTitle').innerText = "PREPARING REVEAL...";
+  document.getElementById('rateGrid').style.display = 'none';
+
+  hideRevealCountdown();
+  setRevealCountdown(3);
+
+  revealTimer = setInterval(() => {
+    const el = document.getElementById('reveal');
+    let t = parseInt(el.innerText, 10);
+    t -= 1;
+
+    if (t <= 0) {
+      clearInterval(revealTimer);
+      revealTimer = null;
+      hideRevealCountdown();
+      completeReveal();
+      return;
+    }
+
+    el.innerText = t;
+  }, 1000);
+
+  revealSafetyTimer = setTimeout(() => {
+    if (phase === "reveal" && !videoUpgraded) {
+      completeReveal();
+    }
+  }, 6000);
 }
 
-document.getElementById('skipBtn').onclick = () => location.reload();
+function completeReveal() {
+  if (videoUpgraded) return;
+  videoUpgraded = true;
+  phase = "video";
+  clearSessionTimers();
+  upgradeToVideo();
+}
 
+async function upgradeToVideo() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: true
+    });
+
+    localStream = stream;
+    document.getElementById('localVideo').srcObject = stream;
+    revealVideoSlots();
+
+    const pc = currentCall && currentCall.peerConnection;
+    if (pc && typeof pc.getSenders === 'function') {
+      const senders = pc.getSenders() || [];
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+
+      const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+      const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+
+      if (videoTrack) {
+        if (videoSender && typeof videoSender.replaceTrack === 'function') {
+          await videoSender.replaceTrack(videoTrack);
+        } else if (typeof pc.addTrack === 'function') {
+          try { pc.addTrack(videoTrack, stream); } catch {}
+        }
+      }
+
+      if (audioTrack && !audioSender && typeof pc.addTrack === 'function') {
+        try { pc.addTrack(audioTrack, stream); } catch {}
+      }
+    }
+
+    setMutedState(false);
+    resetUI();
+  } catch (err) {
+    console.error("Video upgrade failed:", err);
+    revealVideoSlots();
+    setMutedState(false);
+    resetUI();
+  }
+}
+
+document.getElementById('skipBtn').onclick = teardownAndReload;
+window.addEventListener('beforeunload', cleanupAll);
 </script>
 
 </body>
