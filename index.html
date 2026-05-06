@@ -245,6 +245,11 @@ let searchingInterval=null;
 let lobbyEntry=null;
 let timerInterval=null;
 
+/* rating system extras */
+let ratingTimer=null;
+let ratingCountdown=10;
+let ratingSelected=false;
+
 peer.on('open',id=>myId=id);
 
 /* SEARCH UI */
@@ -280,7 +285,7 @@ if(!key) return;
 const pid=users[key];
 
 db.ref('lobby/'+key).remove();
-lobbyEntry.remove();
+if(lobbyEntry) lobbyEntry.remove();
 
 partnerPeerId=pid;
 currentMatchId=[myId,pid].sort().join('_');
@@ -304,6 +309,10 @@ startCall(call);
 });
 });
 
+function endCall(){
+location.reload();
+}
+
 function startCall(call){
 isConnected=true;
 setSearching(false);
@@ -315,6 +324,10 @@ document.getElementById('remoteVideo').srcObject=s;
 startSession(s);
 }
 });
+
+/* instant disconnect fix */
+call.on('close',endCall);
+call.on('error',endCall);
 }
 
 /* AUDIO PHASE */
@@ -324,32 +337,32 @@ document.getElementById('remoteAudio').srcObject=stream;
 document.getElementById('videoSide').classList.add('active');
 document.getElementById('timer').style.display='block';
 
-let endTime = Date.now() + 120000;
+let endTime=Date.now()+120000;
 
 function updateTimer(){
-let remaining = endTime - Date.now();
+let remaining=endTime-Date.now();
 
-if(remaining <= 0){
+if(remaining<=0){
 clearInterval(timerInterval);
-document.getElementById('timer').innerText = "0:00";
+document.getElementById('timer').innerText="0:00";
 showRating();
 return;
 }
 
-let totalSeconds = Math.floor(remaining / 1000);
-let m = Math.floor(totalSeconds / 60);
-let s = totalSeconds % 60;
+let total=Math.floor(remaining/1000);
+let m=Math.floor(total/60);
+let s=total%60;
 
-document.getElementById('timer').innerText =
-`${m}:${s < 10 ? '0' : ''}${s}`;
+document.getElementById('timer').innerText=
+`${m}:${s<10?'0':''}${s}`;
 }
 
 updateTimer();
-timerInterval = setInterval(updateTimer, 100);
+timerInterval=setInterval(updateTimer,100);
 
 }
 
-/* RATING */
+/* 🔴 RATING WITH PRESSURE TIMER */
 function showRating(){
 
 document.getElementById('rating-screen').style.display='flex';
@@ -357,14 +370,41 @@ document.getElementById('rating-screen').style.display='flex';
 const grid=document.getElementById('rateGrid');
 grid.innerHTML='';
 
+ratingCountdown=10;
+ratingSelected=false;
+
+const title=document.getElementById('ratingTitle');
+title.style.color="red";
+title.innerText="RATE THEM (10)";
+
+ratingTimer=setInterval(()=>{
+
+ratingCountdown--;
+title.innerText=`RATE THEM (${ratingCountdown})`;
+
+if(ratingCountdown<=0 && !ratingSelected){
+clearInterval(ratingTimer);
+
+db.ref('matches/'+currentMatchId+'/'+myId).set(5);
+
+title.innerText="AUTO-RATED (5)";
+grid.style.display='none';
+}
+
+},1000);
+
 for(let i=1;i<=10;i++){
 const b=document.createElement('button');
 b.className='rate-btn';
 b.innerText=i;
 
 b.onclick=()=>{
+ratingSelected=true;
+clearInterval(ratingTimer);
+
 db.ref('matches/'+currentMatchId+'/'+myId).set(i);
-document.getElementById('ratingTitle').innerText="WAITING...";
+
+title.innerText="WAITING...";
 grid.style.display='none';
 };
 
