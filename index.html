@@ -6,17 +6,13 @@
     <title>Rathe | rate then hate</title>
     <style>
         :root { --red: #ff3b30; --bg: #000; --panel: #0a0a0a; }
-        body, html {
-            margin: 0; padding: 0; height: 100vh; width: 100vw;
-            background-color: var(--bg); color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden; touch-action: none;
-        }
+        body, html { margin: 0; padding: 0; height: 100vh; width: 100vw; background-color: var(--bg); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; touch-action: none; }
         .app-wrapper { display: flex; height: 100vh; width: 100vw; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .video-side { width: 0; flex: 0; display: flex; flex-direction: column; background: #000; overflow: hidden; opacity: 0; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid #222; }
-        .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; }
-        .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .user-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #050505; border-bottom: 1px solid #111; position: relative; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+        .camera-placeholder { width: 100px; height: 100px; border: 2px solid #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 1; }
         .q-mark { font-size: 50px; font-weight: 800; }
         .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .container { text-align: center; padding: 20px; width: 85%; max-width: 400px; }
@@ -26,17 +22,22 @@
         #cancelBtn { background: #222; color: #fff; margin-top: 15px; display: none; }
         #skipBtn { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; background: var(--red); color: white; padding: 22px; font-size: 1.2rem; font-weight: 900; border-radius: 18px; border: none; z-index: 9999; box-shadow: 0 15px 45px rgba(255, 59, 48, 0.4); }
         #timer { font-family: monospace; font-size: 2rem; color: var(--red); margin-bottom: 20px; display: none; font-weight: bold; }
-        #rating-screen { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; padding: 20px; }
+        #rating-screen { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; padding: 20px; text-align: center; }
         .rate-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin-top: 25px; }
         .rate-btn { padding: 20px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
-
     <div class="app-wrapper" id="wrapper">
         <div class="video-side" id="videoSide">
-            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div></div>
-            <div class="user-slot"><div class="camera-placeholder"><span class="q-mark">?</span></div></div>
+            <div class="user-slot">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="camera-placeholder" id="remotePlaceholder"><span class="q-mark">?</span></div>
+            </div>
+            <div class="user-slot">
+                <video id="localVideo" autoplay playsinline muted></video>
+                <div class="camera-placeholder" id="localPlaceholder"><span class="q-mark">?</span></div>
+            </div>
         </div>
         <div class="control-side" id="controlSide">
             <div class="container">
@@ -48,153 +49,138 @@
             </div>
         </div>
     </div>
-
     <button id="skipBtn">SKIP / HATE</button>
     <audio id="remoteAudio" autoplay playsinline></audio>
-
     <div id="rating-screen">
-        <h1 style="font-size: 2.5rem;">RATE THEM</h1>
+        <h1 id="ratingTitle" style="font-size: 2.5rem;">RATE THEM</h1>
         <div class="rate-grid" id="rateGrid"></div>
     </div>
 
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA", 
+            databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/", 
+            projectId: "rate-then-hate-backend", 
+            appId: "1:195653571803:web:6482704037cb0f2835e8fe" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const peer = new Peer({ config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }] }});
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
-    databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com/",
-    projectId: "rate-then-hate-backend",
-    appId: "1:195653571803:web:6482704037cb0f2835e8fe"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+        let localStream, myId, myEntry, timerInterval, currentCall, searchingInterval, partnerPeerId, currentMatchId;
+        let isConnected = false;
 
-const peer = new Peer({
-    config: {
-        'iceServers': [
-            { url: 'stun:stun.l.google.com:19302' },
-            { url: 'stun:stun1.l.google.com:19302' },
-            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
-        ]
-    }
-});
+        peer.on('open', id => myId = id);
 
-const startBtn = document.getElementById('startBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const skipBtn = document.getElementById('skipBtn');
-const videoSide = document.getElementById('videoSide');
-const remoteAudio = document.getElementById('remoteAudio');
-const timerDisplay = document.getElementById('timer');
+        function terminateAndRefresh() {
+            if (currentMatchId) db.ref('matches/' + currentMatchId).remove();
+            window.location.reload();
+        }
 
-let localStream, myId, myEntry, timerInterval, currentCall, searchingInterval;
-let isConnected = false;
+        skipBtn.onclick = terminateAndRefresh;
 
-peer.on('open', (id) => { myId = id; });
+        startBtn.onclick = async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                startBtn.innerText = "SEARCHING...";
+                cancelBtn.style.display = "block";
+                myEntry = db.ref('lobby').push(myId);
 
-function terminateAndRefresh() {
-    clearInterval(searchingInterval);
-    if (localStream) localStream.getTracks().forEach(t => t.stop());
-    if (currentCall) currentCall.close();
-    if (myEntry) myEntry.remove();
-    window.location.replace(window.location.origin + window.location.pathname + "?v=" + Date.now());
-}
-
-skipBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); terminateAndRefresh(); });
-
-startBtn.onclick = async () => {
-    remoteAudio.play().catch(() => {}); remoteAudio.pause();
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        startBtn.disabled = true;
-        startBtn.innerText = "SEARCHING...";
-        cancelBtn.style.display = "block";
-        cancelBtn.onclick = () => terminateAndRefresh();
-
-        // 1. Enter the lobby first
-        myEntry = db.ref('lobby').push(myId);
-
-        // 2. Start an active loop to find a partner
-        searchingInterval = setInterval(() => {
-            if (isConnected) return;
-            
-            db.ref('lobby').once('value', (snap) => {
-                const users = snap.val();
-                if (!users) return;
-
-                const keys = Object.keys(users);
-                // Look for someone who ISN'T me
-                const partnerKey = keys.find(k => users[k] !== myId);
-
-                if (partnerKey) {
-                    const partnerId = users[partnerKey];
-                    // Attempt to remove them to "claim" the match
-                    db.ref('lobby/' + partnerKey).remove().then(() => {
-                        // If we successfully removed them, we are the CALLER
-                        clearInterval(searchingInterval);
-                        if (myEntry) myEntry.remove();
-                        setupCallHandlers(peer.call(partnerId, localStream));
-                    }).catch(() => {
-                        // Someone else claimed them first, keep looking
+                searchingInterval = setInterval(() => {
+                    if (isConnected) return;
+                    db.ref('lobby').once('value', snap => {
+                        const users = snap.val();
+                        if (!users) return;
+                        const partnerKey = Object.keys(users).find(k => users[k] !== myId);
+                        if (partnerKey) {
+                            const pId = users[partnerKey];
+                            db.ref('lobby/' + partnerKey).remove().then(() => {
+                                partnerPeerId = pId;
+                                currentMatchId = myId + "_" + pId;
+                                setupCallHandlers(peer.call(pId, localStream));
+                            });
+                        }
                     });
+                }, 3000);
+            } catch(e) { alert("Mic required."); }
+        };
+
+        peer.on('call', call => {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                localStream = stream;
+                partnerPeerId = call.peer;
+                currentMatchId = partnerPeerId + "_" + myId;
+                call.answer(stream);
+                setupCallHandlers(call);
+            });
+        });
+
+        function setupCallHandlers(call) {
+            currentCall = call;
+            isConnected = true;
+            call.on('stream', rem => finalizeConnection(rem));
+            call.on('close', terminateAndRefresh);
+            
+            // Listen for the reveal signal
+            db.ref('matches/' + currentMatchId).on('value', snap => {
+                const data = snap.val();
+                if (data && data[myId] && data[partnerPeerId]) {
+                    triggerVideoReveal();
                 }
             });
-        }, 3000); // Check every 3 seconds
+        }
 
-    } catch(e) { alert("Mic access required."); }
-};
+        function finalizeConnection(stream) {
+            document.getElementById('remoteAudio').srcObject = stream;
+            videoSide.classList.add('active');
+            startBtn.parentElement.style.display = "none";
+            skipBtn.style.display = "block";
+            timerDisplay.style.display = "block";
+            let time = 120;
+            timerInterval = setInterval(() => {
+                let m = Math.floor(time/60), s = time%60;
+                timerDisplay.innerText = `${m}:${s<10?'0':''}${s}`;
+                if(--time < 0) { clearInterval(timerInterval); launchRating(); }
+            }, 1000);
+        }
 
-peer.on('call', (call) => {
-    if (isConnected) return;
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-        localStream = stream;
-        call.answer(stream);
-        clearInterval(searchingInterval);
-        if (myEntry) myEntry.remove();
-        setupCallHandlers(call);
-    });
-});
+        function launchRating() {
+            document.getElementById('rating-screen').style.display = 'flex';
+            const grid = document.getElementById('rateGrid');
+            grid.innerHTML = '';
+            for(let i=1; i<=10; i++) {
+                const b = document.createElement('button');
+                b.className = 'rate-btn'; b.innerText = i;
+                b.onclick = () => {
+                    db.ref('matches/' + currentMatchId + '/' + myId).set(i);
+                    document.getElementById('ratingTitle').innerText = "WAITING FOR PARTNER...";
+                    grid.style.display = 'none';
+                };
+                grid.appendChild(b);
+            }
+        }
 
-function setupCallHandlers(call) {
-    currentCall = call;
-    call.on('close', () => terminateAndRefresh());
-    call.on('error', () => terminateAndRefresh());
-    call.on('stream', (rem) => { if(!isConnected) finalizeConnection(rem); });
-}
-
-function finalizeConnection(stream) {
-    isConnected = true;
-    remoteAudio.srcObject = stream;
-    remoteAudio.play();
-    videoSide.classList.add('active');
-    startBtn.style.display = "none";
-    cancelBtn.style.display = "none";
-    skipBtn.style.display = "block";
-    timerDisplay.style.display = "block";
-    
-    let time = 120;
-    timerInterval = setInterval(() => {
-        let m = Math.floor(time/60), s = time%60;
-        timerDisplay.innerText = `${m}:${s<10?'0':''}${s}`;
-        if(--time < 0) { clearInterval(timerInterval); launchRating(); }
-    }, 1000);
-}
-
-function launchRating() {
-    skipBtn.style.display = "none";
-    document.getElementById('rating-screen').style.display = 'flex';
-    const grid = document.getElementById('rateGrid');
-    for(let i=1; i<=10; i++) {
-        const b = document.createElement('button');
-        b.className = 'rate-btn'; b.innerText = i;
-        b.onclick = () => terminateAndRefresh();
-        grid.appendChild(b);
-    }
-}
-
-window.onbeforeunload = () => { if(myEntry) myEntry.remove(); };
-</script>
+        async function triggerVideoReveal() {
+            try {
+                const vidStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = vidStream;
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localPlaceholder').style.display = 'none';
+                
+                // Switch to video call
+                const call = peer.call(partnerPeerId, localStream);
+                call.on('stream', rem => {
+                    document.getElementById('remoteVideo').srcObject = rem;
+                    document.getElementById('remotePlaceholder').style.display = 'none';
+                    document.getElementById('rating-screen').style.display = 'none';
+                });
+            } catch(e) { console.error(e); }
+        }
+    </script>
 </body>
 </html>
+
