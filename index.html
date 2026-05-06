@@ -38,6 +38,11 @@ body::before {
 .camera-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Bebas Neue', sans-serif; font-size: 120px; color: #ffffff; z-index: 1; user-select: none; letter-spacing: 4px; opacity: 0; transition: opacity .4s ease; }
 .camera-placeholder.visible { opacity: 1; }
 .slot-label { position: absolute; bottom: 12px; left: 16px; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; z-index: 5; }
+.rating-badge { position: absolute; top: 16px; right: 16px; font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; line-height: 1; z-index: 10; opacity: 0; transition: opacity .5s ease; text-shadow: 0 2px 12px rgba(0,0,0,.8); }
+.rating-badge.show { opacity: 1; }
+.rating-badge.red    { color: #ff2d20; }
+.rating-badge.yellow { color: #ffd60a; }
+.rating-badge.green  { color: #00ff87; }
 .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); position: relative; }
 .container { text-align: center; width: 85%; max-width: 380px; }
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1; letter-spacing: 6px; background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
@@ -89,11 +94,13 @@ body::before {
       <video id="remoteVideo" autoplay playsinline></video>
       <div class="camera-placeholder">?</div>
       <div class="slot-label">remote</div>
+      <div id="remoteRating" class="rating-badge" style="display:none"></div>
     </div>
     <div class="user-slot">
       <video id="localVideo" autoplay playsinline muted></video>
       <div class="camera-placeholder">?</div>
       <div class="slot-label">you</div>
+      <div id="myRating" class="rating-badge" style="display:none"></div>
     </div>
   </div>
   <div class="control-side">
@@ -163,6 +170,7 @@ let partnerPeerId, currentMatchId, currentCall, signalRef;
 let phase = 'idle';
 let searchInterval, sessionTimer, ratingTimer;
 let ratingSelected = false, ratingFired = false;
+let myRatingVal = null;
 
 /* ── UI ── */
 const $ = id => document.getElementById(id);
@@ -314,7 +322,6 @@ function handleCall(call){
       $('remoteVideo').srcObject=remoteStream;
       $('remoteVideo').classList.add('live');
       $('videoSide').classList.add('active');
-      // Hide ? marks when video reveals
       document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
       return;
     }
@@ -323,6 +330,25 @@ function handleCall(call){
       startSession();
     }
   });
+
+  // Also listen for new tracks via RTCPeerConnection directly
+  // This catches the video track added during renegotiation
+  // which PeerJS sometimes doesn't re-emit as a new 'stream' event
+  call.on('stream', ()=>{}); // keep PeerJS stream handling alive
+  setTimeout(()=>{
+    const pc = call.peerConnection;
+    if(!pc) return;
+    pc.ontrack = (e) => {
+      if(!e.track || e.track.kind !== 'video') return;
+      // Build a new stream with the incoming video track
+      const remoteStream = new MediaStream([e.track]);
+      $('remoteVideo').srcObject = remoteStream;
+      $('remoteVideo').classList.add('live');
+      $('videoSide').classList.add('active');
+      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+    };
+  }, 500);
+
   call.on('close', ()=>{ if(phase!=='idle') reset(); });
   call.on('error', ()=>{ if(phase!=='idle') reset(); });
 }
@@ -376,9 +402,23 @@ function showRating(){
 function finishRating(val){
   if(phase!=='rating'||ratingSelected) return;
   ratingSelected=true; clearTimers();
+  myRatingVal = val;
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
+  // Listen for partner's rating to show on their camera
+  db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value', snap => {
+    const v = snap.val(); if(!v) return;
+    showRatingBadge('remoteRating', v); // their rating of themselves shown on their feed
+  });
   $('rating-screen').style.display='none';
   phase='reveal'; startRevealCountdown();
+}
+
+function showRatingBadge(id, val){
+  const el = $(id); if(!el) return;
+  el.innerText = val;
+  el.className = 'rating-badge ' + (val <= 3 ? 'red' : val <= 6 ? 'yellow' : 'green');
+  el.style.display = 'block';
+  setTimeout(()=>el.classList.add('show'), 50);
 }
 
 /* ── REVEAL COUNTDOWN ── */
@@ -445,6 +485,8 @@ async function upgradeToVideo(){
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
+  // Show my rating on my camera slot
+  if(myRatingVal !== null) showRatingBadge('myRating', myRatingVal);
 }
 
 /* ── PARTNER VIDEO READY ── */
@@ -490,6 +532,8 @@ function reset(){
   $('remoteAudio').srcObject=null;
   $('remoteVideo').srcObject=null; $('remoteVideo').classList.remove('live');
   $('localVideo').srcObject=null;  $('localVideo').classList.remove('live');
+  ['remoteRating','myRating'].forEach(id=>{ const el=$(id); if(el){el.style.display='none';el.className='rating-badge';} });
+  myRatingVal=null;
   setStatus('ready when you are','');
 }
 </script>
