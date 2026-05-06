@@ -485,8 +485,9 @@ async function upgradeToVideo(){
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
-  // Show my rating on my camera slot
   if(myRatingVal !== null) showRatingBadge('myRating', myRatingVal);
+  // Show skip button again in video phase
+  $('skipBtn').style.display='block';
 }
 
 /* ── PARTNER VIDEO READY ── */
