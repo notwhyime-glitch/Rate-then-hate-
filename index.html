@@ -35,7 +35,8 @@ body::before {
 .user-slot + .user-slot { border-top: 1px solid var(--border); }
 .user-slot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; opacity: 0; transition: opacity .4s ease; }
 .user-slot video.live { opacity: 1; }
-.camera-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: #1a1a1a; z-index: 1; user-select: none; letter-spacing: 4px; }
+.camera-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Bebas Neue', sans-serif; font-size: 120px; color: #ffffff; z-index: 1; user-select: none; letter-spacing: 4px; opacity: 0; transition: opacity .4s ease; }
+.camera-placeholder.visible { opacity: 1; }
 .slot-label { position: absolute; bottom: 12px; left: 16px; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; z-index: 5; }
 .control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); position: relative; }
 .container { text-align: center; width: 85%; max-width: 380px; }
@@ -52,8 +53,11 @@ body::before {
 @keyframes searching-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,135,.3); } 50% { box-shadow: 0 0 0 14px rgba(0,255,135,0); } }
 .dots::after { content: ''; animation: dots 1.2s steps(4, end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
-#skipBtn { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; background: var(--red); color: #fff; padding: 18px; border: none; border-radius: 14px; font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; cursor: pointer; z-index: 9998; transition: transform .15s ease; }
+#skipBtn, #cancelBtn { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; color: #fff; padding: 18px; border: none; border-radius: 14px; font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; cursor: pointer; z-index: 9998; transition: transform .15s ease; }
+#skipBtn { background: var(--red); }
+#cancelBtn { background: var(--red); }
 #skipBtn:active { transform: translateX(-50%) scale(.97); }
+#cancelBtn:active { transform: translateX(-50%) scale(.97); }
 #rating-screen { position: fixed; inset: 0; background: rgba(0,0,0,.96); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9997; padding: 32px; backdrop-filter: blur(12px); }
 #ratingTitle { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 5px; color: var(--red); margin-bottom: 8px; }
 #ratingSubtitle { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 36px; }
@@ -83,12 +87,12 @@ body::before {
   <div class="video-side" id="videoSide">
     <div class="user-slot">
       <video id="remoteVideo" autoplay playsinline></video>
-      <div class="camera-placeholder">THEM</div>
+      <div class="camera-placeholder">?</div>
       <div class="slot-label">remote</div>
     </div>
     <div class="user-slot">
       <video id="localVideo" autoplay playsinline muted></video>
-      <div class="camera-placeholder">YOU</div>
+      <div class="camera-placeholder">?</div>
       <div class="slot-label">you</div>
     </div>
   </div>
@@ -104,6 +108,7 @@ body::before {
 </div>
 
 <button id="skipBtn">SKIP / HATE</button>
+<button id="cancelBtn">CANCEL SEARCH</button>
 <audio id="remoteAudio" autoplay></audio>
 
 <div id="rating-screen">
@@ -168,30 +173,18 @@ function showToast(msg, dur=3000){
 }
 
 /* ── PEER ── */
-function bindPeerEvents(){
-  peer.on('open', id => { myId=id; peerRetries=0; setStatus('ready when you are'); });
-  peer.on('error', err => {
-    console.error('PeerJS error', err);
-    if(err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error'){
-      if(peerRetries < 3){
-        peerRetries++;
-        showToast(`server unreachable — retry ${peerRetries}/3`);
-        setTimeout(()=>{
-          try{ peer.destroy(); }catch(e){}
-          peer = createPeer();
-          bindPeerEvents();
-        }, 2000 * peerRetries);
-      } else {
-        showToast('could not reach server — check connection');
-        setStatus('connection failed', 'red');
-      }
-    } else {
-      showToast('connection error');
-    }
-  });
-  peer.on('call', handleIncomingCall);
-}
-bindPeerEvents();
+peer.on('open', id => { myId=id; setStatus('ready when you are'); });
+peer.on('error', err => {
+  console.error('PeerJS error', err);
+  if(err.type === 'peer-unavailable'){
+    showToast('partner disconnected');
+    reset();
+  } else {
+    showToast('connection error — refresh and try again');
+    setStatus('connection failed','red');
+  }
+});
+peer.on('call', handleIncomingCall);
 
 /* ── TIMERS ── */
 function clearTimers(){
@@ -247,6 +240,7 @@ $('startBtn').onclick = async () => {
   $('startBtn').classList.add('searching');
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
   setStatus('scanning the void','green');
+  $('cancelBtn').style.display='block';
 
   const ref = db.ref('lobby').push(myId);
   myLobbyKey = ref.key;
@@ -300,6 +294,7 @@ async function handleIncomingCall(call){
   clearInterval(searchInterval); searchInterval=null;
   $('startBtn').classList.add('searching');
   setStatus('matched — connecting','green');
+  $('cancelBtn').style.display='none';
   call.answer(localStream);
   listenForPartnerSignals();
   handleCall(call);
@@ -319,6 +314,8 @@ function handleCall(call){
       $('remoteVideo').srcObject=remoteStream;
       $('remoteVideo').classList.add('live');
       $('videoSide').classList.add('active');
+      // Hide ? marks when video reveals
+      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
       return;
     }
     if(phase==='connecting'){
@@ -338,6 +335,9 @@ function startSession(){
   $('timer').style.display='block';
   $('skipBtn').style.display='block';
   setStatus('audio call — live','green');
+  // Show split layout immediately in audio phase — cameras hidden, ? visible
+  $('videoSide').classList.add('active');
+  document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
 
   let end = Date.now()+120_000;
   function tick(){
@@ -352,7 +352,8 @@ function startSession(){
 /* ── RATING ── */
 function showRating(){
   if(ratingFired) return; ratingFired=true; phase='rating';
-  $('skipBtn').style.display='none'; $('timer').style.display='none';
+  $('skipBtn').style.display='none';
+  $('cancelBtn').style.display='none'; $('timer').style.display='none';
   const screen=$('rating-screen'), grid=$('rateGrid'), title=$('ratingTitle'), fill=$('countdownFill');
   screen.style.display='flex'; grid.innerHTML=''; ratingSelected=false;
 
@@ -396,8 +397,17 @@ function startRevealCountdown(){
 async function upgradeToVideo(){
   if(phase==='video') return;
   phase='video';
-  try{ videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true}); }
-  catch(e){showToast('camera access denied');setStatus('video upgrade failed','red');return;}
+  setStatus('enabling camera...','green');
+  try{
+    // Give camera time to spin up — no timeout rush
+    videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+  } catch(e){
+    showToast('camera access denied — staying audio only');
+    setStatus('audio only mode','green');
+    phase='video'; // stay in video phase, just no camera
+    sendSignal('video-ready');
+    return;
+  }
 
   $('localVideo').srcObject=videoStream;
   $('localVideo').classList.add('live');
@@ -442,8 +452,19 @@ function handleRemoteVideoReady(){
   if(phase==='reveal'||phase==='rating'||phase==='session') upgradeToVideo();
 }
 
-/* ── SKIP ── */
+/* ── SKIP / CANCEL ── */
 $('skipBtn').onclick = () => { sendSignal('skip'); reset(); };
+$('cancelBtn').onclick = () => {
+  clearTimers();
+  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  phase='idle';
+  $('startBtn').classList.remove('searching');
+  $('startBtn').style.display='block';
+  $('startBtn').innerHTML='START MATCHING';
+  $('cancelBtn').style.display='none';
+  setStatus('ready when you are','');
+};
 
 /* ── RESET ── */
 function reset(){
@@ -461,9 +482,11 @@ function reset(){
   $('startBtn').innerHTML='START MATCHING';
   $('timer').style.display='none'; $('timer').innerText='02:00';
   $('skipBtn').style.display='none';
+  $('cancelBtn').style.display='none';
   $('rating-screen').style.display='none';
   $('reveal').style.display='none';
   $('videoSide').classList.remove('active');
+  document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
   $('remoteAudio').srcObject=null;
   $('remoteVideo').srcObject=null; $('remoteVideo').classList.remove('live');
   $('localVideo').srcObject=null;  $('localVideo').classList.remove('live');
