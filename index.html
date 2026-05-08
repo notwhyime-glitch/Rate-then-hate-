@@ -351,33 +351,43 @@ function initiateCall(){
 /* ── HANDLE CALL ── */
 function handleCall(call){
   currentCall=call;
+
+  // Set ontrack immediately on the PC so we never miss a video track
+  // whether it arrives in the initial stream or via renegotiation later
+  function attachRemoteVideo(track){
+    // Build or extend the remote stream
+    let rs = $('remoteVideo').srcObject;
+    if(!rs || !(rs instanceof MediaStream)) rs = new MediaStream();
+    rs.addTrack(track);
+    $('remoteVideo').srcObject = rs;
+    $('remoteVideo').classList.add('live');
+    $('videoSide').classList.add('active');
+    document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+  }
+
   call.on('stream', remoteStream => {
-    if(remoteStream.getVideoTracks().length>0){
-      $('remoteVideo').srcObject=remoteStream;
-      $('remoteVideo').classList.add('live');
-      $('videoSide').classList.add('active');
-      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+    const videoTracks = remoteStream.getVideoTracks();
+    if(videoTracks.length > 0){
+      videoTracks.forEach(t => attachRemoteVideo(t));
       return;
     }
     if(phase==='connecting'){
-      $('remoteAudio').srcObject=remoteStream;
+      $('remoteAudio').srcObject = remoteStream;
       startSession();
     }
   });
 
-  call.on('stream', ()=>{});
-  setTimeout(()=>{
+  // Also hook directly into RTCPeerConnection.ontrack for renegotiation video
+  // Do it immediately — not in a timeout — so no tracks are ever missed
+  const waitForPc = setInterval(()=>{
     const pc = call.peerConnection;
     if(!pc) return;
-    pc.ontrack = (e) => {
-      if(!e.track || e.track.kind !== 'video') return;
-      const remoteStream = new MediaStream([e.track]);
-      $('remoteVideo').srcObject = remoteStream;
-      $('remoteVideo').classList.add('live');
-      $('videoSide').classList.add('active');
-      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-    };
-  }, 500);
+    clearInterval(waitForPc);
+    pc.addEventListener('track', e => {
+      if(e.track.kind !== 'video') return;
+      attachRemoteVideo(e.track);
+    });
+  }, 50);
 
   call.on('close', ()=>{ if(phase!=='idle') reset(); });
   call.on('error', ()=>{ if(phase!=='idle') reset(); });
