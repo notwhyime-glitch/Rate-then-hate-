@@ -40,11 +40,25 @@ body::before {
 .slot-label { position: absolute; bottom: 12px; left: 16px; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; z-index: 5; }
 .rating-badge { position: absolute; top: 16px; right: 16px; font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; line-height: 1; z-index: 10; opacity: 0; transition: opacity .5s ease; text-shadow: 0 2px 12px rgba(0,0,0,.8); }
 .rating-badge.show { opacity: 1; }
+/* Updated badge color classes */
 .rating-badge.red    { color: #ff2d20; }
 .rating-badge.yellow { color: #ffd60a; }
 .rating-badge.green  { color: #00ff87; }
-.control-side { flex: 1; display: flex; justify-content: center; align-items: center; background: var(--panel); position: relative; }
-.container { text-align: center; width: 85%; max-width: 380px; }
+.rating-badge.blue   { color: #00b4ff; }
+
+/* ── CONTROL SIDE with animated background ── */
+.control-side {
+  flex: 1; display: flex; justify-content: center; align-items: center;
+  position: relative; overflow: hidden;
+  background: var(--panel);
+  animation: bgShift 20s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes bgShift {
+  0%   { background: #080808; }
+  100% { background: #4a4a4a; }
+}
+
+.container { text-align: center; width: 85%; max-width: 380px; position: relative; z-index: 1; }
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1; letter-spacing: 6px; background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
 .tagline { color: var(--muted); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
 #timer { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--red); letter-spacing: 4px; display: none; margin-bottom: 24px; animation: pulse-red 1s ease-in-out infinite; }
@@ -67,9 +81,24 @@ body::before {
 #ratingTitle { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 5px; color: var(--red); margin-bottom: 8px; }
 #ratingSubtitle { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 36px; }
 .rate-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; width: 100%; max-width: 400px; }
-.rate-btn { padding: 20px 0; background: #111; border: 1px solid #222; border-radius: 10px; color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; cursor: pointer; transition: background .15s ease, transform .1s ease, border-color .15s ease; }
-.rate-btn:hover { background: #222; border-color: #444; transform: translateY(-2px); }
+.rate-btn {
+  padding: 20px 0; background: #111; border: 2px solid transparent;
+  border-radius: 10px; font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem; cursor: pointer;
+  transition: background .15s ease, transform .1s ease, border-color .15s ease, color .15s ease;
+}
 .rate-btn:active { transform: scale(.95); }
+
+/* Rating button colors by range */
+.rate-btn.r-red    { color: #ff2d20; border-color: #ff2d2033; }
+.rate-btn.r-red:hover    { background: #ff2d2018; border-color: #ff2d2066; }
+.rate-btn.r-yellow { color: #ffd60a; border-color: #ffd60a33; }
+.rate-btn.r-yellow:hover { background: #ffd60a18; border-color: #ffd60a66; }
+.rate-btn.r-green  { color: #00ff87; border-color: #00ff8733; }
+.rate-btn.r-green:hover  { background: #00ff8718; border-color: #00ff8766; }
+.rate-btn.r-blue   { color: #00b4ff; border-color: #00b4ff33; }
+.rate-btn.r-blue:hover   { background: #00b4ff18; border-color: #00b4ff66; }
+
 #countdownBar { width: 100%; max-width: 400px; height: 3px; background: #1a1a1a; border-radius: 2px; margin-top: 28px; overflow: hidden; }
 #countdownFill { height: 100%; width: 100%; background: var(--red); transition: width 1s linear; }
 #reveal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; background: #000; z-index: 9999; }
@@ -142,8 +171,7 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
-/* ── PEERJS (explicit config — more stable than default) ── */
-// Try multiple PeerJS servers in order
+/* ── PEERJS ── */
 function createPeer() {
   return new Peer(undefined, {
     host: '0.peerjs.com',
@@ -162,7 +190,6 @@ function createPeer() {
 }
 
 let peer = createPeer();
-let peerRetries = 0;
 
 /* ── STATE ── */
 let myId, myLobbyKey, localStream, videoStream;
@@ -172,12 +199,20 @@ let searchInterval, sessionTimer, ratingTimer;
 let ratingSelected = false, ratingFired = false;
 let myRatingVal = null;
 
-/* ── UI ── */
+/* ── HELPERS ── */
 const $ = id => document.getElementById(id);
 const setStatus = (msg, cls='') => { const el=$('statusLine'); el.className=cls; el.innerHTML=msg; };
 function showToast(msg, dur=3000){
   const t=$('toast'); t.innerText=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+/* ── Rating color helper (1-3 red, 4-6 yellow, 7-9 green, 10 blue) ── */
+function ratingColorClass(val){
+  if(val <= 3) return 'red';
+  if(val <= 6) return 'yellow';
+  if(val <= 9) return 'green';
+  return 'blue';
 }
 
 /* ── PEER ── */
@@ -213,7 +248,6 @@ function listenForPartnerSignals(){
     if(val==='skip')        { showToast('they skipped you 💀'); reset(); }
     if(val==='video-ready') { handleRemoteVideoReady(); }
   });
-  // WebRTC renegotiation listener
   db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value', async snap => {
     const val = snap.val();
     const pc  = currentCall && currentCall.peerConnection;
@@ -270,7 +304,7 @@ async function tryMatch(){
 
     let won=false;
     await matchRef.transaction(cur => {
-      if(cur!==null) return; // abort
+      if(cur!==null) return;
       won=true;
       return {a:myId,b:pid,status:'locked',ts:Date.now()};
     });
@@ -331,16 +365,12 @@ function handleCall(call){
     }
   });
 
-  // Also listen for new tracks via RTCPeerConnection directly
-  // This catches the video track added during renegotiation
-  // which PeerJS sometimes doesn't re-emit as a new 'stream' event
-  call.on('stream', ()=>{}); // keep PeerJS stream handling alive
+  call.on('stream', ()=>{});
   setTimeout(()=>{
     const pc = call.peerConnection;
     if(!pc) return;
     pc.ontrack = (e) => {
       if(!e.track || e.track.kind !== 'video') return;
-      // Build a new stream with the incoming video track
       const remoteStream = new MediaStream([e.track]);
       $('remoteVideo').srcObject = remoteStream;
       $('remoteVideo').classList.add('live');
@@ -361,7 +391,6 @@ function startSession(){
   $('timer').style.display='block';
   $('skipBtn').style.display='block';
   setStatus('audio call — live','green');
-  // Show split layout immediately in audio phase — cameras hidden, ? visible
   $('videoSide').classList.add('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
 
@@ -385,7 +414,8 @@ function showRating(){
 
   for(let i=1;i<=10;i++){
     const b=document.createElement('button');
-    b.className='rate-btn'; b.innerText=i; b.onclick=()=>finishRating(i);
+    b.className='rate-btn r-' + ratingColorClass(i);
+    b.innerText=i; b.onclick=()=>finishRating(i);
     grid.appendChild(b);
   }
   fill.style.width='100%';
@@ -404,10 +434,9 @@ function finishRating(val){
   ratingSelected=true; clearTimers();
   myRatingVal = val;
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
-  // Listen for partner's rating to show on their camera
   db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value', snap => {
     const v = snap.val(); if(!v) return;
-    showRatingBadge('remoteRating', v); // their rating of themselves shown on their feed
+    showRatingBadge('remoteRating', v);
   });
   $('rating-screen').style.display='none';
   phase='reveal'; startRevealCountdown();
@@ -416,7 +445,7 @@ function finishRating(val){
 function showRatingBadge(id, val){
   const el = $(id); if(!el) return;
   el.innerText = val;
-  el.className = 'rating-badge ' + (val <= 3 ? 'red' : val <= 6 ? 'yellow' : 'green');
+  el.className = 'rating-badge ' + ratingColorClass(val);
   el.style.display = 'block';
   setTimeout(()=>el.classList.add('show'), 50);
 }
@@ -439,12 +468,11 @@ async function upgradeToVideo(){
   phase='video';
   setStatus('enabling camera...','green');
   try{
-    // Give camera time to spin up — no timeout rush
     videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
   } catch(e){
     showToast('camera access denied — staying audio only');
     setStatus('audio only mode','green');
-    phase='video'; // stay in video phase, just no camera
+    phase='video';
     sendSignal('video-ready');
     return;
   }
@@ -459,14 +487,11 @@ async function upgradeToVideo(){
   const videoTrack=videoStream.getVideoTracks()[0];
   const audioTrack=videoStream.getAudioTracks()[0];
 
-  // Replace audio (no renegotiation needed)
   const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
   if(audioSender&&audioTrack) await audioSender.replaceTrack(audioTrack);
 
-  // Deterministic offerer — smaller peer ID always offers, eliminates glare
   const iAmOfferer = myId < partnerPeerId;
 
-  // Set onnegotiationneeded BEFORE addTrack so the event is never missed
   if(iAmOfferer){
     pc.onnegotiationneeded = async () => {
       try{
@@ -476,9 +501,7 @@ async function upgradeToVideo(){
       }catch(e){console.error('offer error',e);}
     };
   }
-  // Answerer side handled by webrtc listener in listenForPartnerSignals()
 
-  // Add video track AFTER handler is set — triggers onnegotiationneeded on offerer
   const existingSender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
   if(existingSender){ await existingSender.replaceTrack(videoTrack); }
   else              { pc.addTrack(videoTrack,videoStream); }
@@ -486,7 +509,6 @@ async function upgradeToVideo(){
   sendSignal('video-ready');
   setStatus('video call — live','green');
   if(myRatingVal !== null) showRatingBadge('myRating', myRatingVal);
-  // Show skip button again in video phase
   $('skipBtn').style.display='block';
 }
 
