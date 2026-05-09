@@ -408,9 +408,13 @@ function handleCall(call){
   currentCall=call;
   function attachRemoteVideo(track){
     let rs=$('remoteVideo').srcObject;
-    if(!rs||!(rs instanceof MediaStream)) rs=new MediaStream();
-    rs.addTrack(track);
-    $('remoteVideo').srcObject=rs;
+    if(!rs||!(rs instanceof MediaStream)){
+      rs=new MediaStream();
+      $('remoteVideo').srcObject=rs;
+    }
+    // avoid duplicate tracks
+    if(!rs.getTracks().find(t=>t.id===track.id)) rs.addTrack(track);
+    $('remoteVideo').play().catch(()=>{});
     $('remoteVideo').classList.add('live');
     document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
   }
@@ -470,10 +474,13 @@ function finishRating(val){
   if(phase!=='rating'||ratingSelected) return;
   ratingSelected=true; clearTimers();
   myRatingVal=val;
+  // MY rating = what I think of THEM → show on their (remote) camera
+  showRatingBadge('remoteRating', val);
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
+  // THEIR rating = what they think of ME → show on my camera when it arrives
   db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
     const v=snap.val(); if(!v) return;
-    showRatingBadge('remoteRating',v);
+    showRatingBadge('myRating', v);
   });
   $('rating-screen').style.display='none';
   phase='reveal';
@@ -515,7 +522,6 @@ async function upgradeToVideo(){
     showToast('camera access denied — staying audio only');
     setStatus('audio only mode','green');
     sendSignal('video-ready');
-    if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal);
     $('skipBtn').style.display='block';
     return;
   }
@@ -524,7 +530,7 @@ async function upgradeToVideo(){
   $('videoSide').classList.add('active');
 
   const pc=currentCall&&currentCall.peerConnection;
-  if(!pc){ sendSignal('video-ready'); setStatus('video call — live','green'); if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal); $('skipBtn').style.display='block'; return; }
+  if(!pc){ sendSignal('video-ready'); setStatus('video call — live','green'); $('skipBtn').style.display='block'; return; }
 
   const videoTrack=videoStream.getVideoTracks()[0];
   const audioTrack=videoStream.getAudioTracks()[0];
@@ -546,7 +552,6 @@ async function upgradeToVideo(){
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
-  if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal);
   $('skipBtn').style.display='block';
 }
 
