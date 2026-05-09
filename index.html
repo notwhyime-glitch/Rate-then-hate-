@@ -23,66 +23,75 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
   opacity: 0.035;
 }
+
 .app-wrapper { display: flex; height: 100dvh; width: 100vw; }
 
-/* ── VIDEO SIDE ── */
+/* ── VIDEO SIDE — left 50%, hidden until active ── */
 .video-side {
-  width: 0; flex: 0; display: flex; flex-direction: column;
-  justify-content: center; align-items: center; gap: 20px;
-  background: #000; opacity: 0; padding: 20px 16px;
-  transition: width .6s cubic-bezier(.77,0,.18,1), opacity .6s ease, flex .6s cubic-bezier(.77,0,.18,1);
+  width: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  opacity: 0;
   overflow: hidden;
+  border-right: 1px solid var(--border);
+  transition: width .6s cubic-bezier(.77,0,.18,1), opacity .6s ease, min-width .6s cubic-bezier(.77,0,.18,1);
 }
-.video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid var(--border); }
+.video-side.active {
+  width: 50vw;
+  min-width: 50vw;
+  opacity: 1;
+}
 
-/* ── CAMERA BOXES — square with neo-red outline ── */
+/* ── TWO BIG CAMERA SQUARES — each 50% of viewport height ── */
 .user-slot {
   position: relative;
-  width: min(42vw, 260px);
-  aspect-ratio: 1 / 1;
-  border-radius: 14px;
+  width: 100%;
+  height: 50vh;
   border: 2px solid var(--red);
   box-shadow:
-    0 0 10px rgba(255, 45, 32, 0.55),
-    0 0 28px rgba(255, 45, 32, 0.25),
-    inset 0 0 12px rgba(255, 45, 32, 0.08);
+    0 0 14px rgba(255,45,32,0.6),
+    0 0 40px rgba(255,45,32,0.2),
+    inset 0 0 20px rgba(255,45,32,0.06);
   overflow: hidden;
   background: #060606;
   flex-shrink: 0;
 }
+/* remove double-border between slots */
+.user-slot + .user-slot { border-top: none; }
 
 .user-slot video {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover; z-index: 2;
   opacity: 0; transition: opacity .4s ease;
-  border-radius: 12px;
 }
 .user-slot video.live { opacity: 1; }
 
-/* flip local cam to mirror */
+/* mirror the local cam */
 #localVideo { transform: scaleX(-1); }
 
 .camera-placeholder {
   position: absolute; inset: 0;
   display: flex; justify-content: center; align-items: center;
-  font-family: 'Bebas Neue', sans-serif; font-size: 80px;
-  color: #ffffff; z-index: 1; user-select: none;
+  font-family: 'Bebas Neue', sans-serif; font-size: 110px;
+  color: #1c1c1c; z-index: 1; user-select: none;
   letter-spacing: 4px; opacity: 0; transition: opacity .4s ease;
 }
 .camera-placeholder.visible { opacity: 1; }
 
 .slot-label {
-  position: absolute; bottom: 8px; left: 12px;
+  position: absolute; bottom: 12px; left: 16px;
   font-size: 9px; color: var(--muted);
   letter-spacing: 2px; text-transform: uppercase; z-index: 5;
 }
 .rating-badge {
-  position: absolute; top: 10px; right: 12px;
-  font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem;
+  position: absolute; top: 16px; right: 18px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 4rem;
   line-height: 1; z-index: 10; opacity: 0;
   transition: opacity .5s ease;
-  text-shadow: 0 2px 12px rgba(0,0,0,.8);
+  text-shadow: 0 2px 16px rgba(0,0,0,.9);
 }
 .rating-badge.show { opacity: 1; }
 .rating-badge.red    { color: #ff2d20; }
@@ -95,7 +104,7 @@ body::before {
   flex: 1; display: flex; justify-content: center; align-items: center;
   position: relative; overflow: hidden;
   background: var(--panel);
-  animation: bgShift 20s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  animation: bgShift 20s cubic-bezier(0.45,0,0.55,1) infinite alternate;
 }
 @keyframes bgShift {
   0%   { background: #080808; }
@@ -104,10 +113,10 @@ body::before {
 
 .container { text-align: center; width: 85%; max-width: 380px; position: relative; z-index: 1; }
 
-/* ── LOGO with lily ── */
+/* ── LOGO ROW ── */
 .logo-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 12px; margin-bottom: 6px;
+  gap: 10px; margin-bottom: 6px;
 }
 .logo {
   font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1;
@@ -115,48 +124,47 @@ body::before {
   background: linear-gradient(135deg, #fff 0%, #888 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.lily-svg {
-  width: 52px; height: 52px; flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(80, 140, 255, 0.6));
+
+/* Wither Rose pixel art */
+.wither-rose {
+  width: 48px; height: 48px; flex-shrink: 0;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px rgba(120,0,200,0.55));
 }
 
 .tagline { color: var(--muted); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
 #timer { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--red); letter-spacing: 4px; display: none; margin-bottom: 24px; animation: pulse-red 1s ease-in-out infinite; }
-@keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.6} }
 #statusLine { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; min-height: 16px; margin-bottom: 32px; }
 #statusLine.green { color: var(--green); }
 #statusLine.red   { color: var(--red); }
 .main-btn { background: #fff; color: #000; padding: 18px 24px; border: none; border-radius: 12px; width: 100%; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 3px; cursor: pointer; transition: transform .15s ease, background .2s ease; }
 .main-btn:active { transform: scale(.97); }
 .main-btn.searching { background: var(--green); color: #000; animation: searching-pulse 1.4s ease-in-out infinite; }
-@keyframes searching-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,135,.3); } 50% { box-shadow: 0 0 0 14px rgba(0,255,135,0); } }
-.dots::after { content: ''; animation: dots 1.2s steps(4, end) infinite; }
+@keyframes searching-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,135,.3)} 50%{box-shadow:0 0 0 14px rgba(0,255,135,0)} }
+.dots::after { content: ''; animation: dots 1.2s steps(4,end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
 #skipBtn, #cancelBtn { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; color: #fff; padding: 18px; border: none; border-radius: 14px; font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; cursor: pointer; z-index: 9998; transition: transform .15s ease; }
-#skipBtn { background: var(--red); }
-#cancelBtn { background: var(--red); }
-#skipBtn:active { transform: translateX(-50%) scale(.97); }
-#cancelBtn:active { transform: translateX(-50%) scale(.97); }
+#skipBtn  { background: var(--red); }
+#cancelBtn{ background: var(--red); }
+#skipBtn:active  { transform: translateX(-50%) scale(.97); }
+#cancelBtn:active{ transform: translateX(-50%) scale(.97); }
 #rating-screen { position: fixed; inset: 0; background: rgba(0,0,0,.96); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9997; padding: 32px; backdrop-filter: blur(12px); }
 #ratingTitle { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 5px; color: var(--red); margin-bottom: 8px; }
 #ratingSubtitle { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 36px; }
 .rate-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; width: 100%; max-width: 400px; }
-.rate-btn { padding: 20px 0; background: #111; border: 2px solid transparent; border-radius: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; cursor: pointer; transition: background .15s ease, transform .1s ease, border-color .15s ease, color .15s ease; }
+.rate-btn { padding: 20px 0; background: #111; border: 2px solid transparent; border-radius: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; cursor: pointer; transition: background .15s, transform .1s, border-color .15s, color .15s; }
 .rate-btn:active { transform: scale(.95); }
-.rate-btn.r-red    { color: #ff2d20; border-color: #ff2d2033; }
-.rate-btn.r-red:hover    { background: #ff2d2018; border-color: #ff2d2066; }
-.rate-btn.r-yellow { color: #ffd60a; border-color: #ffd60a33; }
-.rate-btn.r-yellow:hover { background: #ffd60a18; border-color: #ffd60a66; }
-.rate-btn.r-green  { color: #00ff87; border-color: #00ff8733; }
-.rate-btn.r-green:hover  { background: #00ff8718; border-color: #00ff8766; }
-.rate-btn.r-blue   { color: #00b4ff; border-color: #00b4ff33; }
-.rate-btn.r-blue:hover   { background: #00b4ff18; border-color: #00b4ff66; }
+.rate-btn.r-red    { color:#ff2d20; border-color:#ff2d2033; } .rate-btn.r-red:hover    { background:#ff2d2018; border-color:#ff2d2066; }
+.rate-btn.r-yellow { color:#ffd60a; border-color:#ffd60a33; } .rate-btn.r-yellow:hover { background:#ffd60a18; border-color:#ffd60a66; }
+.rate-btn.r-green  { color:#00ff87; border-color:#00ff8733; } .rate-btn.r-green:hover  { background:#00ff8718; border-color:#00ff8766; }
+.rate-btn.r-blue   { color:#00b4ff; border-color:#00b4ff33; } .rate-btn.r-blue:hover   { background:#00b4ff18; border-color:#00b4ff66; }
 #countdownBar { width: 100%; max-width: 400px; height: 3px; background: #1a1a1a; border-radius: 2px; margin-top: 28px; overflow: hidden; }
 #countdownFill { height: 100%; width: 100%; background: var(--red); transition: width 1s linear; }
 #reveal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; background: #000; z-index: 9999; }
 #revealNum { font-family: 'Bebas Neue', sans-serif; font-size: 12rem; line-height: 1; color: var(--green); animation: pop .3s ease; }
 #revealLabel { font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
-@keyframes pop { 0% { transform: scale(1.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes pop { 0%{transform:scale(1.4);opacity:0} 100%{transform:scale(1);opacity:1} }
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 24px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #fff; z-index: 99999; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
 #toast.show { transform: translateX(-50%) translateY(0); }
 </style>
@@ -170,6 +178,8 @@ body::before {
 <div id="toast"></div>
 
 <div class="app-wrapper">
+
+  <!-- VIDEO SIDE: two big squares, each 50vh, stacked -->
   <div class="video-side" id="videoSide">
     <div class="user-slot">
       <video id="remoteVideo" autoplay playsinline></video>
@@ -184,30 +194,50 @@ body::before {
       <div id="myRating" class="rating-badge" style="display:none"></div>
     </div>
   </div>
+
+  <!-- CONTROL SIDE -->
   <div class="control-side">
     <div class="container">
       <div id="timer">02:00</div>
 
-      <!-- LOGO ROW with blue lily -->
       <div class="logo-row">
         <div class="logo">Rathe</div>
-        <!-- Blue lily SVG -->
-        <svg class="lily-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Wither Rose — Minecraft pixel art (16×16) -->
+        <svg class="wither-rose" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
           <!-- stem -->
-          <line x1="40" y1="72" x2="40" y2="46" stroke="#3a8fd4" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="7" y="10" width="2" height="5" fill="#2e6b1e"/>
+          <!-- thorns -->
+          <rect x="5" y="13" width="2" height="1" fill="#245416"/>
+          <rect x="9" y="11" width="2" height="1" fill="#245416"/>
           <!-- leaves -->
-          <path d="M40 62 Q28 56 24 48 Q34 52 40 62Z" fill="#4fb3e8" opacity="0.7"/>
-          <path d="M40 62 Q52 56 56 48 Q46 52 40 62Z" fill="#4fb3e8" opacity="0.7"/>
-          <!-- petals — 6 around center -->
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(0 40 40)" opacity="0.9"/>
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(60 40 40)" opacity="0.85"/>
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(120 40 40)" opacity="0.9"/>
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(180 40 40)" opacity="0.85"/>
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(240 40 40)" opacity="0.9"/>
-          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(300 40 40)" opacity="0.85"/>
-          <!-- center -->
-          <circle cx="40" cy="40" r="6" fill="#ffe066"/>
-          <circle cx="40" cy="40" r="3" fill="#ffb300"/>
+          <rect x="3" y="11" width="4" height="2" fill="#2e6b1e"/>
+          <rect x="9" y="9"  width="4" height="2" fill="#2e6b1e"/>
+          <!-- outer petals — withered dark magenta -->
+          <rect x="6" y="2" width="4" height="2" fill="#4a0e6e"/>
+          <rect x="6" y="9" width="4" height="2" fill="#3a0a58"/>
+          <rect x="3" y="5" width="2" height="4" fill="#3d0c62"/>
+          <rect x="11" y="5" width="2" height="4" fill="#3d0c62"/>
+          <!-- diagonal petals -->
+          <rect x="4" y="3" width="2" height="2" fill="#57117f"/>
+          <rect x="10" y="3" width="2" height="2" fill="#57117f"/>
+          <rect x="4" y="8" width="2" height="2" fill="#3a0a58"/>
+          <rect x="10" y="8" width="2" height="2" fill="#3a0a58"/>
+          <!-- inner petals -->
+          <rect x="6" y="4" width="4" height="5" fill="#220840"/>
+          <!-- dark core -->
+          <rect x="7" y="5" width="2" height="3" fill="#0d0018"/>
+          <!-- highlight flecks -->
+          <rect x="7" y="4" width="2" height="1" fill="#8b2fc9" opacity="0.9"/>
+          <rect x="6" y="6" width="1" height="1" fill="#7a28b8" opacity="0.6"/>
+          <rect x="9" y="7" width="1" height="1" fill="#7a28b8" opacity="0.6"/>
+          <!-- wither particle dots -->
+          <rect x="2"  y="1" width="1" height="1" fill="#9333ea" opacity="0.8"/>
+          <rect x="13" y="2" width="1" height="1" fill="#7e22ce" opacity="0.7"/>
+          <rect x="4"  y="0" width="1" height="1" fill="#a855f7" opacity="0.6"/>
+          <rect x="11" y="1" width="1" height="1" fill="#9333ea" opacity="0.5"/>
+          <rect x="1"  y="6" width="1" height="1" fill="#6b21a8" opacity="0.5"/>
+          <rect x="14" y="5" width="1" height="1" fill="#6b21a8" opacity="0.5"/>
+          <rect x="13" y="9" width="1" height="1" fill="#7e22ce" opacity="0.4"/>
         </svg>
       </div>
 
@@ -234,7 +264,6 @@ body::before {
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <script>
-/* ── FIREBASE ── */
 firebase.initializeApp({
   apiKey:      "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
   authDomain:  "rate-then-hate-backend.firebaseapp.com",
@@ -246,74 +275,50 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
-/* ── PEERJS ── */
 function createPeer() {
   return new Peer(undefined, {
-    host: 'my-peer-server-mjl5.onrender.com',
-    port: 443,
-    path: '/peerjs',
-    secure: true,
-    debug: 1,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-      ]
-    }
+    host: 'my-peer-server-mjl5.onrender.com', port: 443, path: '/peerjs',
+    secure: true, debug: 1,
+    config: { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+    ]}
   });
 }
 
 let peer = createPeer();
-
-/* ── STATE ── */
 let myId, myLobbyKey, localStream, videoStream;
 let partnerPeerId, currentMatchId, currentCall, signalRef;
 let phase = 'idle';
 let searchInterval, sessionTimer, ratingTimer;
 let ratingSelected = false, ratingFired = false;
 let myRatingVal = null;
+let pendingVideoReady = false; // partner sent video-ready before we were ready
 
-/* ── HELPERS ── */
 const $ = id => document.getElementById(id);
 const setStatus = (msg, cls='') => { const el=$('statusLine'); el.className=cls; el.innerHTML=msg; };
 function showToast(msg, dur=3000){
   const t=$('toast'); t.innerText=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), dur);
 }
+function ratingColorClass(v){ return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue'; }
 
-function ratingColorClass(val){
-  if(val <= 3) return 'red';
-  if(val <= 6) return 'yellow';
-  if(val <= 9) return 'green';
-  return 'blue';
-}
-
-/* ── PEER ── */
 peer.on('open', id => { myId=id; setStatus('ready when you are'); });
 peer.on('error', err => {
   console.error('PeerJS error', err);
-  if(err.type === 'peer-unavailable'){
-    showToast('partner disconnected');
-    reset();
-  } else {
-    showToast('connection error — refresh and try again');
-    setStatus('connection failed','red');
-  }
+  if(err.type==='peer-unavailable'){ showToast('partner disconnected'); reset(); }
+  else { showToast('connection error — refresh and try again'); setStatus('connection failed','red'); }
 });
 peer.on('call', handleIncomingCall);
 
-/* ── TIMERS ── */
 function clearTimers(){
   if(searchInterval){clearInterval(searchInterval);searchInterval=null;}
   if(sessionTimer)  {clearInterval(sessionTimer);  sessionTimer=null;}
   if(ratingTimer)   {clearInterval(ratingTimer);   ratingTimer=null;}
 }
-function stopSignalListener(){
-  if(signalRef){signalRef.off();signalRef=null;}
-}
+function stopSignalListener(){ if(signalRef){signalRef.off();signalRef=null;} }
 
-/* ── SIGNALING ── */
 function listenForPartnerSignals(){
   if(!currentMatchId||!partnerPeerId) return;
   signalRef = db.ref(`matches/${currentMatchId}/signals/${partnerPeerId}`);
@@ -323,13 +328,12 @@ function listenForPartnerSignals(){
     if(val==='video-ready') { handleRemoteVideoReady(); }
   });
   db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value', async snap => {
-    const val = snap.val();
-    const pc  = currentCall && currentCall.peerConnection;
+    const val=snap.val(), pc=currentCall&&currentCall.peerConnection;
     if(!pc||!val) return;
     if(val.offer && pc.signalingState==='stable'){
       try{
         await pc.setRemoteDescription(new RTCSessionDescription(val.offer));
-        const ans = await pc.createAnswer();
+        const ans=await pc.createAnswer();
         await pc.setLocalDescription(ans);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/answer`).set({sdp:ans.sdp,type:ans.type});
       }catch(e){console.error('offer handling',e);}
@@ -341,52 +345,35 @@ function listenForPartnerSignals(){
   });
 }
 
-function sendSignal(type){
-  if(!currentMatchId||!myId) return;
-  db.ref(`matches/${currentMatchId}/signals/${myId}`).set(type);
-}
+function sendSignal(type){ if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/signals/${myId}`).set(type); }
 
-/* ── START MATCHING ── */
 $('startBtn').onclick = async () => {
   if(phase!=='idle') return;
-  try{ localStream = await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
+  try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
   catch(e){ showToast('mic access needed!'); return; }
-
   phase='searching';
   $('startBtn').classList.add('searching');
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
   setStatus('scanning the void','green');
   $('cancelBtn').style.display='block';
-
-  const ref = db.ref('lobby').push(myId);
-  myLobbyKey = ref.key;
-  searchInterval = setInterval(tryMatch, 2000);
+  const ref=db.ref('lobby').push(myId);
+  myLobbyKey=ref.key;
+  searchInterval=setInterval(tryMatch,2000);
 };
 
-/* ── MATCHMAKING ── */
 async function tryMatch(){
   if(phase!=='searching') return;
-  const snap = await db.ref('lobby').once('value');
-  const users = snap.val(); if(!users) return;
-
+  const snap=await db.ref('lobby').once('value');
+  const users=snap.val(); if(!users) return;
   for(let k of Object.keys(users)){
-    const pid = users[k];
-    if(!pid||pid===myId) continue;
-
-    const matchId  = [myId,pid].sort().join('_');
-    const matchRef = db.ref(`matches/${matchId}`);
-
+    const pid=users[k]; if(!pid||pid===myId) continue;
+    const matchId=[myId,pid].sort().join('_');
+    const matchRef=db.ref(`matches/${matchId}`);
     let won=false;
-    await matchRef.transaction(cur => {
-      if(cur!==null) return;
-      won=true;
-      return {a:myId,b:pid,status:'locked',ts:Date.now()};
-    });
+    await matchRef.transaction(cur=>{ if(cur!==null) return; won=true; return{a:myId,b:pid,status:'locked',ts:Date.now()}; });
     if(!won) continue;
-
     db.ref(`lobby/${k}`).remove();
     if(myLobbyKey) db.ref(`lobby/${myLobbyKey}`).remove();
-
     partnerPeerId=pid; currentMatchId=matchId; phase='connecting';
     clearInterval(searchInterval); searchInterval=null;
     setStatus('matched — connecting','green');
@@ -396,7 +383,6 @@ async function tryMatch(){
   }
 }
 
-/* ── INCOMING CALL ── */
 async function handleIncomingCall(call){
   if(phase==='session'||phase==='rating'||phase==='video'){call.close();return;}
   if(!localStream){
@@ -416,64 +402,40 @@ async function handleIncomingCall(call){
   handleCall(call);
 }
 
-/* ── INITIATE CALL ── */
-function initiateCall(){
-  const call = peer.call(partnerPeerId, localStream);
-  handleCall(call);
-}
+function initiateCall(){ const call=peer.call(partnerPeerId,localStream); handleCall(call); }
 
-/* ── HANDLE CALL ── */
 function handleCall(call){
   currentCall=call;
-
   function attachRemoteVideo(track){
-    let rs = $('remoteVideo').srcObject;
-    if(!rs || !(rs instanceof MediaStream)) rs = new MediaStream();
+    let rs=$('remoteVideo').srcObject;
+    if(!rs||!(rs instanceof MediaStream)) rs=new MediaStream();
     rs.addTrack(track);
-    $('remoteVideo').srcObject = rs;
+    $('remoteVideo').srcObject=rs;
     $('remoteVideo').classList.add('live');
-    $('videoSide').classList.add('active');
     document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
   }
-
   call.on('stream', remoteStream => {
-    const videoTracks = remoteStream.getVideoTracks();
-    if(videoTracks.length > 0){
-      videoTracks.forEach(t => attachRemoteVideo(t));
-      return;
-    }
-    if(phase==='connecting'){
-      $('remoteAudio').srcObject = remoteStream;
-      startSession();
-    }
+    const vt=remoteStream.getVideoTracks();
+    if(vt.length>0){ vt.forEach(t=>attachRemoteVideo(t)); return; }
+    if(phase==='connecting'){ $('remoteAudio').srcObject=remoteStream; startSession(); }
   });
-
-  const waitForPc = setInterval(()=>{
-    const pc = call.peerConnection;
-    if(!pc) return;
+  const waitForPc=setInterval(()=>{
+    const pc=call.peerConnection; if(!pc) return;
     clearInterval(waitForPc);
-    pc.addEventListener('track', e => {
-      if(e.track.kind !== 'video') return;
-      attachRemoteVideo(e.track);
-    });
-  }, 50);
-
-  call.on('close', ()=>{ if(phase!=='idle') reset(); });
-  call.on('error', ()=>{ if(phase!=='idle') reset(); });
+    pc.addEventListener('track',e=>{ if(e.track.kind!=='video') return; attachRemoteVideo(e.track); });
+  },50);
+  call.on('close',()=>{ if(phase!=='idle') reset(); });
+  call.on('error',()=>{ if(phase!=='idle') reset(); });
 }
 
-/* ── SESSION ── */
 function startSession(){
   phase='session';
-  $('startBtn').classList.remove('searching');
-  $('startBtn').style.display='none';
-  $('timer').style.display='block';
-  $('skipBtn').style.display='block';
+  $('startBtn').classList.remove('searching'); $('startBtn').style.display='none';
+  $('timer').style.display='block'; $('skipBtn').style.display='block';
   setStatus('audio call — live','green');
   $('videoSide').classList.add('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
-
-  let end = Date.now()+120_000;
+  let end=Date.now()+120_000;
   function tick(){
     const r=end-Date.now();
     if(r<=0){clearInterval(sessionTimer);sessionTimer=null;showRating();return;}
@@ -483,17 +445,14 @@ function startSession(){
   tick(); sessionTimer=setInterval(tick,250);
 }
 
-/* ── RATING ── */
 function showRating(){
   if(ratingFired) return; ratingFired=true; phase='rating';
-  $('skipBtn').style.display='none';
-  $('cancelBtn').style.display='none'; $('timer').style.display='none';
-  const screen=$('rating-screen'), grid=$('rateGrid'), title=$('ratingTitle'), fill=$('countdownFill');
+  $('skipBtn').style.display='none'; $('cancelBtn').style.display='none'; $('timer').style.display='none';
+  const screen=$('rating-screen'),grid=$('rateGrid'),title=$('ratingTitle'),fill=$('countdownFill');
   screen.style.display='flex'; grid.innerHTML=''; ratingSelected=false;
-
   for(let i=1;i<=10;i++){
     const b=document.createElement('button');
-    b.className='rate-btn r-' + ratingColorClass(i);
+    b.className='rate-btn r-'+ratingColorClass(i);
     b.innerText=i; b.onclick=()=>finishRating(i);
     grid.appendChild(b);
   }
@@ -507,72 +466,73 @@ function showRating(){
   },1000);
 }
 
-/* ── FINISH RATING ── */
 function finishRating(val){
   if(phase!=='rating'||ratingSelected) return;
   ratingSelected=true; clearTimers();
-  myRatingVal = val;
+  myRatingVal=val;
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
-  db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value', snap => {
-    const v = snap.val(); if(!v) return;
-    showRatingBadge('remoteRating', v);
+  db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
+    const v=snap.val(); if(!v) return;
+    showRatingBadge('remoteRating',v);
   });
   $('rating-screen').style.display='none';
-  phase='reveal'; startRevealCountdown();
+  phase='reveal';
+  startRevealCountdown();
 }
 
-function showRatingBadge(id, val){
-  const el = $(id); if(!el) return;
-  el.innerText = val;
-  el.className = 'rating-badge ' + ratingColorClass(val);
-  el.style.display = 'block';
-  setTimeout(()=>el.classList.add('show'), 50);
+function showRatingBadge(id,val){
+  const el=$(id); if(!el) return;
+  el.innerText=val; el.className='rating-badge '+ratingColorClass(val);
+  el.style.display='block';
+  setTimeout(()=>el.classList.add('show'),50);
 }
 
-/* ── REVEAL COUNTDOWN ── */
 function startRevealCountdown(){
-  const overlay=$('reveal'), numEl=$('revealNum');
+  const overlay=$('reveal'),numEl=$('revealNum');
   overlay.style.display='flex'; let count=3; numEl.innerText=count;
   setStatus('video reveal incoming','red');
   const tick=setInterval(()=>{
-    count--; if(count<=0){clearInterval(tick);overlay.style.display='none';upgradeToVideo();return;}
+    count--;
+    if(count<=0){
+      clearInterval(tick);
+      overlay.style.display='none';
+      upgradeToVideo();
+      return;
+    }
     numEl.innerText=count;
     numEl.style.animation='none'; void numEl.offsetWidth; numEl.style.animation='pop .3s ease';
   },1000);
 }
 
-/* ── VIDEO UPGRADE ── */
 async function upgradeToVideo(){
   if(phase==='video') return;
   phase='video';
+  pendingVideoReady=false; // consumed
   setStatus('enabling camera...','green');
   try{
     videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-  } catch(e){
+  }catch(e){
     showToast('camera access denied — staying audio only');
     setStatus('audio only mode','green');
-    phase='video';
     sendSignal('video-ready');
+    if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal);
+    $('skipBtn').style.display='block';
     return;
   }
-
   $('localVideo').srcObject=videoStream;
   $('localVideo').classList.add('live');
   $('videoSide').classList.add('active');
 
   const pc=currentCall&&currentCall.peerConnection;
-  if(!pc){sendSignal('video-ready');setStatus('video call — live','green');return;}
+  if(!pc){ sendSignal('video-ready'); setStatus('video call — live','green'); if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal); $('skipBtn').style.display='block'; return; }
 
   const videoTrack=videoStream.getVideoTracks()[0];
   const audioTrack=videoStream.getAudioTracks()[0];
-
   const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
   if(audioSender&&audioTrack) await audioSender.replaceTrack(audioTrack);
 
-  const iAmOfferer = myId < partnerPeerId;
-
-  if(iAmOfferer){
-    pc.onnegotiationneeded = async () => {
+  if(myId<partnerPeerId){
+    pc.onnegotiationneeded=async()=>{
       try{
         const offer=await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -580,55 +540,56 @@ async function upgradeToVideo(){
       }catch(e){console.error('offer error',e);}
     };
   }
-
   const existingSender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
-  if(existingSender){ await existingSender.replaceTrack(videoTrack); }
-  else              { pc.addTrack(videoTrack,videoStream); }
+  if(existingSender) await existingSender.replaceTrack(videoTrack);
+  else               pc.addTrack(videoTrack,videoStream);
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
-  if(myRatingVal !== null) showRatingBadge('myRating', myRatingVal);
+  if(myRatingVal!==null) showRatingBadge('myRating',myRatingVal);
   $('skipBtn').style.display='block';
 }
 
-/* ── PARTNER VIDEO READY ── */
+/* ── BUG FIX: accept video-ready signal at any post-session phase ── */
 function handleRemoteVideoReady(){
-  if(phase==='reveal'||phase==='rating'||phase==='session') upgradeToVideo();
+  if(phase==='rating'||phase==='reveal'){
+    // Partner is ready but we haven't finished rating/countdown yet — buffer it
+    pendingVideoReady=true;
+    return;
+  }
+  // For session phase (partner triggered early) or video phase (both trigger upgrade)
+  if(phase==='session'||phase==='video'){
+    upgradeToVideo();
+  }
 }
 
-/* ── SKIP / CANCEL ── */
-$('skipBtn').onclick = () => { sendSignal('skip'); reset(); };
-$('cancelBtn').onclick = () => {
+// After upgradeToVideo runs, if partner had already signalled, nothing extra needed
+// because upgradeToVideo is what both sides call independently after their own countdown
+
+$('skipBtn').onclick  = ()=>{ sendSignal('skip'); reset(); };
+$('cancelBtn').onclick = ()=>{
   clearTimers();
   if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
   if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
   phase='idle';
-  $('startBtn').classList.remove('searching');
-  $('startBtn').style.display='block';
-  $('startBtn').innerHTML='START MATCHING';
-  $('cancelBtn').style.display='none';
+  $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
+  $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
   setStatus('ready when you are','');
 };
 
-/* ── RESET ── */
 function reset(){
   clearTimers(); stopSignalListener();
   if(currentCall){try{currentCall.close();}catch(e){} currentCall=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
   if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
-
   phase='idle'; partnerPeerId=null; currentMatchId=null;
-  ratingFired=false; ratingSelected=false;
-
-  $('startBtn').classList.remove('searching');
-  $('startBtn').style.display='block';
+  ratingFired=false; ratingSelected=false; pendingVideoReady=false;
+  $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING';
   $('timer').style.display='none'; $('timer').innerText='02:00';
-  $('skipBtn').style.display='none';
-  $('cancelBtn').style.display='none';
-  $('rating-screen').style.display='none';
-  $('reveal').style.display='none';
+  $('skipBtn').style.display='none'; $('cancelBtn').style.display='none';
+  $('rating-screen').style.display='none'; $('reveal').style.display='none';
   $('videoSide').classList.remove('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
   $('remoteAudio').srcObject=null;
