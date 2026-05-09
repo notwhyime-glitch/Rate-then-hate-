@@ -24,29 +24,73 @@ body::before {
   opacity: 0.035;
 }
 .app-wrapper { display: flex; height: 100dvh; width: 100vw; }
+
+/* ── VIDEO SIDE ── */
 .video-side {
   width: 0; flex: 0; display: flex; flex-direction: column;
-  background: #000; opacity: 0;
+  justify-content: center; align-items: center; gap: 20px;
+  background: #000; opacity: 0; padding: 20px 16px;
   transition: width .6s cubic-bezier(.77,0,.18,1), opacity .6s ease, flex .6s cubic-bezier(.77,0,.18,1);
   overflow: hidden;
 }
 .video-side.active { width: 60vw; flex: 1.5; opacity: 1; border-right: 1px solid var(--border); }
-.user-slot { flex: 1; display: flex; justify-content: center; align-items: center; background: #060606; position: relative; overflow: hidden; }
-.user-slot + .user-slot { border-top: 1px solid var(--border); }
-.user-slot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; opacity: 0; transition: opacity .4s ease; }
+
+/* ── CAMERA BOXES — square with neo-red outline ── */
+.user-slot {
+  position: relative;
+  width: min(42vw, 260px);
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  border: 2px solid var(--red);
+  box-shadow:
+    0 0 10px rgba(255, 45, 32, 0.55),
+    0 0 28px rgba(255, 45, 32, 0.25),
+    inset 0 0 12px rgba(255, 45, 32, 0.08);
+  overflow: hidden;
+  background: #060606;
+  flex-shrink: 0;
+}
+
+.user-slot video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; z-index: 2;
+  opacity: 0; transition: opacity .4s ease;
+  border-radius: 12px;
+}
 .user-slot video.live { opacity: 1; }
-.camera-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: 'Bebas Neue', sans-serif; font-size: 120px; color: #ffffff; z-index: 1; user-select: none; letter-spacing: 4px; opacity: 0; transition: opacity .4s ease; }
+
+/* flip local cam to mirror */
+#localVideo { transform: scaleX(-1); }
+
+.camera-placeholder {
+  position: absolute; inset: 0;
+  display: flex; justify-content: center; align-items: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 80px;
+  color: #ffffff; z-index: 1; user-select: none;
+  letter-spacing: 4px; opacity: 0; transition: opacity .4s ease;
+}
 .camera-placeholder.visible { opacity: 1; }
-.slot-label { position: absolute; bottom: 12px; left: 16px; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; z-index: 5; }
-.rating-badge { position: absolute; top: 16px; right: 16px; font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; line-height: 1; z-index: 10; opacity: 0; transition: opacity .5s ease; text-shadow: 0 2px 12px rgba(0,0,0,.8); }
+
+.slot-label {
+  position: absolute; bottom: 8px; left: 12px;
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase; z-index: 5;
+}
+.rating-badge {
+  position: absolute; top: 10px; right: 12px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem;
+  line-height: 1; z-index: 10; opacity: 0;
+  transition: opacity .5s ease;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8);
+}
 .rating-badge.show { opacity: 1; }
-/* Updated badge color classes */
 .rating-badge.red    { color: #ff2d20; }
 .rating-badge.yellow { color: #ffd60a; }
 .rating-badge.green  { color: #00ff87; }
 .rating-badge.blue   { color: #00b4ff; }
 
-/* ── CONTROL SIDE with animated background ── */
+/* ── CONTROL SIDE ── */
 .control-side {
   flex: 1; display: flex; justify-content: center; align-items: center;
   position: relative; overflow: hidden;
@@ -59,7 +103,23 @@ body::before {
 }
 
 .container { text-align: center; width: 85%; max-width: 380px; position: relative; z-index: 1; }
-.logo { font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1; letter-spacing: 6px; background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+
+/* ── LOGO with lily ── */
+.logo-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: 6px;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1;
+  letter-spacing: 6px;
+  background: linear-gradient(135deg, #fff 0%, #888 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.lily-svg {
+  width: 52px; height: 52px; flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(80, 140, 255, 0.6));
+}
+
 .tagline { color: var(--muted); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
 #timer { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--red); letter-spacing: 4px; display: none; margin-bottom: 24px; animation: pulse-red 1s ease-in-out infinite; }
 @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
@@ -81,15 +141,8 @@ body::before {
 #ratingTitle { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 5px; color: var(--red); margin-bottom: 8px; }
 #ratingSubtitle { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 36px; }
 .rate-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; width: 100%; max-width: 400px; }
-.rate-btn {
-  padding: 20px 0; background: #111; border: 2px solid transparent;
-  border-radius: 10px; font-family: 'Bebas Neue', sans-serif;
-  font-size: 1.6rem; cursor: pointer;
-  transition: background .15s ease, transform .1s ease, border-color .15s ease, color .15s ease;
-}
+.rate-btn { padding: 20px 0; background: #111; border: 2px solid transparent; border-radius: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; cursor: pointer; transition: background .15s ease, transform .1s ease, border-color .15s ease, color .15s ease; }
 .rate-btn:active { transform: scale(.95); }
-
-/* Rating button colors by range */
 .rate-btn.r-red    { color: #ff2d20; border-color: #ff2d2033; }
 .rate-btn.r-red:hover    { background: #ff2d2018; border-color: #ff2d2066; }
 .rate-btn.r-yellow { color: #ffd60a; border-color: #ffd60a33; }
@@ -98,7 +151,6 @@ body::before {
 .rate-btn.r-green:hover  { background: #00ff8718; border-color: #00ff8766; }
 .rate-btn.r-blue   { color: #00b4ff; border-color: #00b4ff33; }
 .rate-btn.r-blue:hover   { background: #00b4ff18; border-color: #00b4ff66; }
-
 #countdownBar { width: 100%; max-width: 400px; height: 3px; background: #1a1a1a; border-radius: 2px; margin-top: 28px; overflow: hidden; }
 #countdownFill { height: 100%; width: 100%; background: var(--red); transition: width 1s linear; }
 #reveal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; background: #000; z-index: 9999; }
@@ -135,7 +187,30 @@ body::before {
   <div class="control-side">
     <div class="container">
       <div id="timer">02:00</div>
-      <div class="logo">Rathe</div>
+
+      <!-- LOGO ROW with blue lily -->
+      <div class="logo-row">
+        <div class="logo">Rathe</div>
+        <!-- Blue lily SVG -->
+        <svg class="lily-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- stem -->
+          <line x1="40" y1="72" x2="40" y2="46" stroke="#3a8fd4" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- leaves -->
+          <path d="M40 62 Q28 56 24 48 Q34 52 40 62Z" fill="#4fb3e8" opacity="0.7"/>
+          <path d="M40 62 Q52 56 56 48 Q46 52 40 62Z" fill="#4fb3e8" opacity="0.7"/>
+          <!-- petals — 6 around center -->
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(0 40 40)" opacity="0.9"/>
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(60 40 40)" opacity="0.85"/>
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(120 40 40)" opacity="0.9"/>
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(180 40 40)" opacity="0.85"/>
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#5baee8" transform="rotate(240 40 40)" opacity="0.9"/>
+          <ellipse cx="40" cy="30" rx="6" ry="14" fill="#7ac3f0" transform="rotate(300 40 40)" opacity="0.85"/>
+          <!-- center -->
+          <circle cx="40" cy="40" r="6" fill="#ffe066"/>
+          <circle cx="40" cy="40" r="3" fill="#ffb300"/>
+        </svg>
+      </div>
+
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
       <button id="startBtn" class="main-btn">START MATCHING</button>
@@ -159,7 +234,7 @@ body::before {
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <script>
-/* ── FIREBASE (testing mode — swap for backend before going live) ── */
+/* ── FIREBASE ── */
 firebase.initializeApp({
   apiKey:      "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
   authDomain:  "rate-then-hate-backend.firebaseapp.com",
@@ -207,7 +282,6 @@ function showToast(msg, dur=3000){
   setTimeout(()=>t.classList.remove('show'), dur);
 }
 
-/* ── Rating color helper (1-3 red, 4-6 yellow, 7-9 green, 10 blue) ── */
 function ratingColorClass(val){
   if(val <= 3) return 'red';
   if(val <= 6) return 'yellow';
@@ -352,10 +426,7 @@ function initiateCall(){
 function handleCall(call){
   currentCall=call;
 
-  // Set ontrack immediately on the PC so we never miss a video track
-  // whether it arrives in the initial stream or via renegotiation later
   function attachRemoteVideo(track){
-    // Build or extend the remote stream
     let rs = $('remoteVideo').srcObject;
     if(!rs || !(rs instanceof MediaStream)) rs = new MediaStream();
     rs.addTrack(track);
@@ -377,8 +448,6 @@ function handleCall(call){
     }
   });
 
-  // Also hook directly into RTCPeerConnection.ontrack for renegotiation video
-  // Do it immediately — not in a timeout — so no tracks are ever missed
   const waitForPc = setInterval(()=>{
     const pc = call.peerConnection;
     if(!pc) return;
