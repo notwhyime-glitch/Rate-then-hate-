@@ -116,6 +116,14 @@ body::before {
 #skipBtn:active  { transform: translateX(-50%) scale(.97); }
 #cancelBtn:active{ transform: translateX(-50%) scale(.97); }
 
+/* ── WAIT TIMER ── */
+#waitTimer {
+  display: none;
+  font-size: 10px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; margin-top: 10px;
+}
+#waitTimer span { color: #fff; }
+
 /* ── REPORT BUTTON ── */
 #reportBtn {
   position: fixed; top: 16px; right: 16px;
@@ -401,6 +409,7 @@ body::before {
       </div>
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
+      <div id="waitTimer">est. wait <span id="waitSecs">—</span></div>
       <button id="startBtn" class="main-btn">START MATCHING</button>
     </div>
   </div>
@@ -623,6 +632,23 @@ $('startBtn').onclick = async () => {
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
   setStatus('scanning the void','green');
   $('cancelBtn').style.display='block';
+  // start wait timer
+  let waitSecs=0;
+  const waitEl=$('waitTimer'), waitNum=$('waitSecs');
+  waitEl.style.display='block'; waitNum.innerText='0s';
+  const waitTick=setInterval(()=>{
+    if(phase!=='searching'){ clearInterval(waitTick); waitEl.style.display='none'; return; }
+    waitSecs++;
+    // estimate based on lobby size: if others are waiting, shorter estimate
+    db.ref('lobby').once('value').then(s=>{
+      const count=s.numChildren();
+      if(count>1){
+        waitNum.innerText='any second...';
+      } else {
+        waitNum.innerText=waitSecs+'s';
+      }
+    }).catch(()=>{ waitNum.innerText=waitSecs+'s'; });
+  },1000);
   const ref=db.ref('lobby').push(myId);
   myLobbyKey=ref.key;
   searchInterval=setInterval(tryMatch,2000);
@@ -645,8 +671,8 @@ async function tryMatch(){
     clearInterval(searchInterval); searchInterval=null;
     setStatus('matched — connecting','green');
     listenForPartnerSignals();
-    // small delay so both peers are fully registered on PeerJS server before calling
-    setTimeout(initiateCall, 1200);
+    // short delay so PeerJS registers the peer ID before the call attempt
+    setTimeout(initiateCall, 400);
     return;
   }
 }
@@ -668,6 +694,8 @@ async function handleIncomingCall(call){
   call.answer(localStream);
   listenForPartnerSignals();
   handleCall(call);
+  // safety net: if stream fires before handleCall sets up listener, start session anyway
+  setTimeout(()=>{ if(phase==='connecting') startSession(); }, 4000);
 }
 
 function initiateCall(){ const call=peer.call(partnerPeerId,localStream); handleCall(call); }
@@ -719,7 +747,8 @@ function handleCall(call){
     $('remoteAudio').srcObject=remoteStream;
     const vt=remoteStream.getVideoTracks();
     if(vt.length>0){ vt.forEach(t=>attachRemoteVideo(t)); }
-    if(phase==='connecting'){ startSession(); }
+    // fire startSession for both 'connecting' and cases where stream arrives slightly late
+    if(phase==='connecting'||phase==='searching'){ startSession(); }
   });
 
   const waitForPc=setInterval(()=>{
@@ -922,6 +951,7 @@ $('cancelBtn').onclick = ()=>{
   phase='idle';
   $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
+  $('waitTimer').style.display='none';
   setReportBtn(false);
   setStatus('ready when you are','');
 };
