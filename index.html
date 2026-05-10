@@ -416,7 +416,6 @@ function acceptTos() {
 }
 
 /* ── REPORT ── */
-const REPORT_EMAIL = 'notwhyime@gmail.com';
 
 function openReport() {
   document.getElementById('reportModal').style.display = 'flex';
@@ -430,19 +429,20 @@ function submitReport() {
   const reason = document.querySelector('input[name="rr"]:checked');
   if (!reason) { showToast('pick a reason first'); return; }
   const detail = document.getElementById('reportDetail').value.trim();
-  const matchInfo = currentMatchId || 'unknown';
-  const subject = encodeURIComponent('[Rathe Report] ' + reason.value);
-  const body = encodeURIComponent(
-    'Reason: ' + reason.value + '\n' +
-    (detail ? 'Details: ' + detail + '\n' : '') +
-    'Match ID: ' + matchInfo + '\n' +
-    'Reporter peer ID: ' + (myId || 'unknown') + '\n' +
-    'Reported peer ID: ' + (partnerPeerId || 'unknown') + '\n' +
-    'Time: ' + new Date().toUTCString()
-  );
-  window.open('mailto:' + REPORT_EMAIL + '?subject=' + subject + '&body=' + body);
+  const report = {
+    reason: reason.value,
+    detail: detail || null,
+    matchId: currentMatchId || 'unknown',
+    reporterPeerId: myId || 'unknown',
+    reportedPeerId: partnerPeerId || 'unknown',
+    ts: Date.now(),
+    tsReadable: new Date().toUTCString(),
+    status: 'open'
+  };
+  db.ref('reports').push(report)
+    .then(() => { showToast('report sent — thank you'); })
+    .catch(() => { showToast('failed to send report — try again'); });
   closeReport();
-  showToast('report sent — thank you');
 }
 
 /* ── FIREBASE & PEER ── */
