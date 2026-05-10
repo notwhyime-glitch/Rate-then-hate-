@@ -506,7 +506,7 @@ function createPeer() {
   });
 }
 
-let peer = createPeer();
+let peer = null;
 let myId, myLobbyKey, localStream, videoStream;
 let partnerPeerId, currentMatchId, currentCall, signalRef;
 let phase = 'idle';
@@ -523,18 +523,43 @@ function showToast(msg, dur=3000){
 }
 function ratingColorClass(v){ return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue'; }
 
-/* show/hide report button based on active session */
 function setReportBtn(visible) {
   $('reportBtn').style.display = visible ? 'block' : 'none';
 }
 
-peer.on('open', id => { myId=id; setStatus('ready when you are'); });
-peer.on('error', err => {
-  console.error('PeerJS error', err);
-  if(err.type==='peer-unavailable'){ showToast('partner disconnected'); reset(); }
-  else { showToast('connection error — refresh and try again'); setStatus('connection failed','red'); }
-});
-peer.on('call', handleIncomingCall);
+function initPeer(){
+  if(peer){ try{ peer.destroy(); }catch(e){} peer=null; }
+  myId = null;
+  peer = createPeer();
+  peer.on('open', id => {
+    myId = id;
+    setStatus('ready when you are');
+  });
+  peer.on('error', err => {
+    console.error('PeerJS error', err);
+    if(err.type==='peer-unavailable'){
+      showToast('partner disconnected');
+      reset();
+    } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'||err.type==='socket-closed'){
+      // server blip — silently recreate peer after short delay
+      setTimeout(()=>{ if(phase==='idle') initPeer(); }, 2000);
+    } else {
+      showToast('connection error — retrying...');
+      setTimeout(()=>{ if(phase==='idle') initPeer(); }, 2000);
+    }
+  });
+  peer.on('disconnected', ()=>{
+    // PeerJS lost connection to signalling server — reconnect if idle
+    if(phase==='idle'){
+      setTimeout(()=>{
+        try{ peer.reconnect(); }catch(e){ initPeer(); }
+      }, 1500);
+    }
+  });
+  peer.on('call', handleIncomingCall);
+}
+
+initPeer();
 
 function clearTimers(){
   if(searchInterval){clearInterval(searchInterval);searchInterval=null;}
@@ -912,6 +937,8 @@ function reset(){
   // clean up presence node
   if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
   setStatus('ready when you are','');
+  // always reinit peer after a session so it's clean for next match
+  setTimeout(initPeer, 300);
 }
 </script>
 </body>
