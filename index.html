@@ -598,6 +598,8 @@ function startWaitTimer(){
 }
 
 function initPeer(){
+  // if peer is healthy and has an ID, don't touch it
+  if(peer && !peer.destroyed && myId){ return; }
   if(peer){ try{ peer.destroy(); }catch(e){} peer=null; }
   myId = null;
   peer = createPeer();
@@ -1002,7 +1004,10 @@ function reset(){
   myRatingVal=null;
   setReportBtn(false);
   setStatus('ready when you are','');
-  setTimeout(initPeer, 300);
+  // only reinit peer if it's gone or disconnected — don't destroy a healthy connection
+  if(!peer || peer.destroyed || peer.disconnected){
+    setTimeout(initPeer, 300);
+  }
 }
 </script>
 </body>
