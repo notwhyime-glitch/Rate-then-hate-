@@ -538,19 +538,31 @@ function initPeer(){
   peer.on('error', err => {
     console.error('PeerJS error', err);
     if(err.type==='peer-unavailable'){
-      showToast('partner disconnected');
-      reset();
+      // only treat as real disconnect if we're actually in a session
+      // during searching/connecting it just means the peer ID wasn't ready yet — ignore it
+      if(phase==='session'||phase==='video'||phase==='rating'||phase==='reveal'){
+        showToast('partner disconnected');
+        reset();
+      } else if(phase==='connecting'){
+        // partner peer not ready yet — wait and retry the call
+        showToast('connection hiccup — retrying...');
+        setTimeout(()=>{
+          if(phase==='connecting'&&partnerPeerId) initiateCall();
+        }, 2000);
+      }
+      // if searching or idle, just ignore — stale peer ID from lobby
     } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'||err.type==='socket-closed'){
-      // server blip — silently recreate peer after short delay
-      setTimeout(()=>{ if(phase==='idle') initPeer(); }, 2000);
+      if(phase==='idle'||phase==='searching'){
+        setTimeout(()=>{ initPeer(); }, 2000);
+      }
     } else {
-      showToast('connection error — retrying...');
-      setTimeout(()=>{ if(phase==='idle') initPeer(); }, 2000);
+      if(phase==='idle'||phase==='searching'){
+        setTimeout(()=>{ initPeer(); }, 2000);
+      }
     }
   });
   peer.on('disconnected', ()=>{
-    // PeerJS lost connection to signalling server — reconnect if idle
-    if(phase==='idle'){
+    if(phase==='idle'||phase==='searching'){
       setTimeout(()=>{
         try{ peer.reconnect(); }catch(e){ initPeer(); }
       }, 1500);
@@ -633,7 +645,8 @@ async function tryMatch(){
     clearInterval(searchInterval); searchInterval=null;
     setStatus('matched — connecting','green');
     listenForPartnerSignals();
-    initiateCall();
+    // small delay so both peers are fully registered on PeerJS server before calling
+    setTimeout(initiateCall, 1200);
     return;
   }
 }
