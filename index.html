@@ -26,52 +26,29 @@ body::before {
 
 .app-wrapper { display: flex; height: 100dvh; width: 100vw; }
 
-/* ── VIDEO SIDE — left 50%, hidden until active ── */
+/* ── VIDEO SIDE ── */
 .video-side {
-  width: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: #000;
-  opacity: 0;
-  overflow: hidden;
+  width: 0; min-width: 0;
+  display: flex; flex-direction: column;
+  background: #000; opacity: 0; overflow: hidden;
   border-right: 1px solid var(--border);
   transition: width .6s cubic-bezier(.77,0,.18,1), opacity .6s ease, min-width .6s cubic-bezier(.77,0,.18,1);
 }
-.video-side.active {
-  width: 50vw;
-  min-width: 50vw;
-  opacity: 1;
-}
+.video-side.active { width: 50vw; min-width: 50vw; opacity: 1; }
 
-/* ── TWO BIG CAMERA SQUARES — each 50% of viewport height ── */
 .user-slot {
-  position: relative;
-  width: 100%;
-  height: 50vh;
+  position: relative; width: 100%; height: 50vh;
   border: 2px solid var(--red);
-  box-shadow:
-    0 0 14px rgba(255,45,32,0.6),
-    0 0 40px rgba(255,45,32,0.2),
-    inset 0 0 20px rgba(255,45,32,0.06);
-  overflow: hidden;
-  background: #060606;
-  flex-shrink: 0;
+  box-shadow: 0 0 14px rgba(255,45,32,0.6), 0 0 40px rgba(255,45,32,0.2), inset 0 0 20px rgba(255,45,32,0.06);
+  overflow: hidden; background: #060606; flex-shrink: 0;
 }
-/* remove double-border between slots */
 .user-slot + .user-slot { border-top: none; }
-
 .user-slot video {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; z-index: 2;
-  opacity: 0; transition: opacity .4s ease;
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 2; opacity: 0; transition: opacity .4s ease;
 }
 .user-slot video.live { opacity: 1; }
-
-/* mirror the local cam */
 #localVideo { transform: scaleX(-1); }
-
 .camera-placeholder {
   position: absolute; inset: 0;
   display: flex; justify-content: center; align-items: center;
@@ -80,7 +57,6 @@ body::before {
   letter-spacing: 4px; opacity: 0; transition: opacity .4s ease;
 }
 .camera-placeholder.visible { opacity: 1; }
-
 .slot-label {
   position: absolute; bottom: 12px; left: 16px;
   font-size: 9px; color: var(--muted);
@@ -89,8 +65,7 @@ body::before {
 .rating-badge {
   position: absolute; top: 16px; right: 18px;
   font-family: 'Bebas Neue', sans-serif; font-size: 4rem;
-  line-height: 1; z-index: 10; opacity: 0;
-  transition: opacity .5s ease;
+  line-height: 1; z-index: 10; opacity: 0; transition: opacity .5s ease;
   text-shadow: 0 2px 16px rgba(0,0,0,.9);
 }
 .rating-badge.show { opacity: 1; }
@@ -102,35 +77,20 @@ body::before {
 /* ── CONTROL SIDE ── */
 .control-side {
   flex: 1; display: flex; justify-content: center; align-items: center;
-  position: relative; overflow: hidden;
-  background: var(--panel);
+  position: relative; overflow: hidden; background: var(--panel);
   animation: bgShift 20s cubic-bezier(0.45,0,0.55,1) infinite alternate;
 }
-@keyframes bgShift {
-  0%   { background: #080808; }
-  100% { background: #4a4a4a; }
-}
+@keyframes bgShift { 0% { background: #080808; } 100% { background: #4a4a4a; } }
 
 .container { text-align: center; width: 85%; max-width: 380px; position: relative; z-index: 1; }
 
-/* ── LOGO ROW ── */
-.logo-row {
-  display: flex; align-items: center; justify-content: center;
-  gap: 10px; margin-bottom: 6px;
-}
+.logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
 .logo {
-  font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1;
-  letter-spacing: 6px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; line-height: 1; letter-spacing: 6px;
   background: linear-gradient(135deg, #fff 0%, #888 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-
-/* Wither Rose pixel art */
-.wither-rose {
-  width: 48px; height: 48px; flex-shrink: 0;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 6px rgba(120,0,200,0.55));
-}
+.wither-rose { width: 48px; height: 48px; flex-shrink: 0; image-rendering: pixelated; filter: drop-shadow(0 0 6px rgba(120,0,200,0.55)); }
 
 .tagline { color: var(--muted); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
 #timer { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--red); letter-spacing: 4px; display: none; margin-bottom: 24px; animation: pulse-red 1s ease-in-out infinite; }
@@ -144,12 +104,82 @@ body::before {
 @keyframes searching-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,135,.3)} 50%{box-shadow:0 0 0 14px rgba(0,255,135,0)} }
 .dots::after { content: ''; animation: dots 1.2s steps(4,end) infinite; }
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
-#skipBtn, #cancelBtn { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 340px; color: #fff; padding: 18px; border: none; border-radius: 14px; font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; cursor: pointer; z-index: 9998; transition: transform .15s ease; }
+
+#skipBtn, #cancelBtn {
+  display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  width: 90%; max-width: 340px; color: #fff; padding: 18px; border: none; border-radius: 14px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; cursor: pointer;
+  z-index: 9998; transition: transform .15s ease;
+}
 #skipBtn  { background: var(--red); }
 #cancelBtn{ background: var(--red); }
 #skipBtn:active  { transform: translateX(-50%) scale(.97); }
 #cancelBtn:active{ transform: translateX(-50%) scale(.97); }
-#rating-screen { position: fixed; inset: 0; background: rgba(0,0,0,.96); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9997; padding: 32px; backdrop-filter: blur(12px); }
+
+/* ── REPORT BUTTON ── */
+#reportBtn {
+  position: fixed; top: 16px; right: 16px;
+  display: none;
+  background: rgba(255,45,32,0.08); color: var(--red);
+  border: 1px solid rgba(255,45,32,0.3); border-radius: 8px;
+  padding: 8px 14px; font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; z-index: 9990; transition: background .2s ease;
+}
+#reportBtn:hover { background: rgba(255,45,32,0.18); }
+
+/* ── REPORT MODAL ── */
+#reportModal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+  display: none; justify-content: center; align-items: center;
+  z-index: 99998; backdrop-filter: blur(10px); padding: 24px;
+}
+.report-box {
+  background: #0f0f0f; border: 1px solid #222; border-radius: 16px;
+  padding: 28px; width: 100%; max-width: 380px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.report-box h2 {
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem;
+  letter-spacing: 4px; color: var(--red); margin: 0;
+}
+.report-box p { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
+.report-reasons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.report-reason {
+  display: flex; align-items: center; gap: 8px; font-size: 11px;
+  letter-spacing: 1px; cursor: pointer;
+  border: 1px solid #1f1f1f; border-radius: 8px; padding: 10px 12px;
+  color: #aaa; transition: border-color .15s, color .15s;
+}
+.report-reason input { accent-color: var(--red); cursor: pointer; }
+.report-reason:has(input:checked) { border-color: rgba(255,45,32,0.5); color: #fff; }
+#reportDetail {
+  width: 100%; height: 70px; background: #0a0a0a; border: 1px solid #1f1f1f;
+  border-radius: 8px; color: #fff; font-family: 'DM Mono', monospace;
+  font-size: 11px; padding: 10px 12px; resize: vertical;
+  letter-spacing: 1px;
+}
+#reportDetail::placeholder { color: #333; }
+#reportDetail:focus { outline: none; border-color: #333; }
+.report-actions { display: flex; gap: 8px; }
+.report-cancel-btn {
+  flex: 1; padding: 12px; background: transparent; border: 1px solid #222;
+  border-radius: 8px; color: #666; font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; cursor: pointer;
+}
+.report-submit-btn {
+  flex: 2; padding: 12px; background: rgba(255,45,32,0.12); border: 1px solid rgba(255,45,32,0.4);
+  border-radius: 8px; color: var(--red); font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem; letter-spacing: 3px; cursor: pointer; transition: background .15s;
+}
+.report-submit-btn:hover { background: rgba(255,45,32,0.22); }
+
+/* ── RATING SCREEN ── */
+#rating-screen {
+  position: fixed; inset: 0; background: rgba(0,0,0,.96);
+  display: none; flex-direction: column; justify-content: center; align-items: center;
+  z-index: 9997; padding: 32px; backdrop-filter: blur(12px);
+}
 #ratingTitle { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 5px; color: var(--red); margin-bottom: 8px; }
 #ratingSubtitle { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 36px; }
 .rate-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; width: 100%; max-width: 400px; }
@@ -161,15 +191,131 @@ body::before {
 .rate-btn.r-blue   { color:#00b4ff; border-color:#00b4ff33; } .rate-btn.r-blue:hover   { background:#00b4ff18; border-color:#00b4ff66; }
 #countdownBar { width: 100%; max-width: 400px; height: 3px; background: #1a1a1a; border-radius: 2px; margin-top: 28px; overflow: hidden; }
 #countdownFill { height: 100%; width: 100%; background: var(--red); transition: width 1s linear; }
+
+/* ── REVEAL ── */
 #reveal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; background: #000; z-index: 9999; }
 #revealNum { font-family: 'Bebas Neue', sans-serif; font-size: 12rem; line-height: 1; color: var(--green); animation: pop .3s ease; }
 #revealLabel { font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
 @keyframes pop { 0%{transform:scale(1.4);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+/* ── TOAST ── */
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 24px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #fff; z-index: 99999; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
 #toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── TERMS MODAL ── */
+#tosModal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.97);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 999999; padding: 20px; backdrop-filter: blur(16px);
+}
+.tos-box {
+  background: #0d0d0d; border: 1px solid #222; border-radius: 18px;
+  padding: 32px 28px; width: 100%; max-width: 460px;
+  display: flex; flex-direction: column; gap: 18px;
+  max-height: 90dvh; overflow: hidden;
+}
+.tos-header { display: flex; align-items: center; gap: 12px; }
+.tos-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 5px; color: #fff; }
+.tos-version { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.tos-scroll {
+  overflow-y: auto; flex: 1;
+  border: 1px solid #1a1a1a; border-radius: 10px;
+  padding: 16px; font-size: 11px; line-height: 1.8;
+  color: #888; max-height: 320px;
+  scrollbar-width: thin; scrollbar-color: #333 transparent;
+}
+.tos-scroll h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 3px; color: #fff; margin: 14px 0 6px; }
+.tos-scroll h3:first-child { margin-top: 0; }
+.tos-scroll p { margin-bottom: 8px; }
+.tos-agree {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px; letter-spacing: 1px; color: #666; cursor: pointer; user-select: none;
+}
+.tos-agree input { accent-color: var(--red); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+#tosAcceptBtn {
+  width: 100%; padding: 16px; border: none; border-radius: 10px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 4px;
+  cursor: pointer; transition: opacity .2s, background .2s;
+  background: var(--red); color: #fff; opacity: 0.35; pointer-events: none;
+}
+#tosAcceptBtn.ready { opacity: 1; pointer-events: all; }
 </style>
 </head>
 <body>
+
+<!-- ── TERMS OF SERVICE MODAL ── -->
+<div id="tosModal">
+  <div class="tos-box">
+    <div class="tos-header">
+      <div>
+        <h1>TERMS OF SERVICE</h1>
+        <div class="tos-version">rathe beta · last updated may 2026</div>
+      </div>
+    </div>
+
+    <div class="tos-scroll" id="tosScroll">
+      <h3>1. Who we are</h3>
+      <p>Rathe ("the service") is a random video/audio matching platform currently in public beta. By using Rathe you agree to these terms in full. If you do not agree, do not use the service.</p>
+
+      <h3>2. Age requirement</h3>
+      <p>You must be at least 18 years old to use Rathe. By accepting these terms you confirm you meet this requirement. We reserve the right to terminate access for any user we have reason to believe is underage.</p>
+
+      <h3>3. Data we collect</h3>
+      <p>Rathe collects and temporarily processes the following data to operate the service:</p>
+      <p><strong style="color:#aaa">Microphone & camera:</strong> Audio and video streams are transmitted peer-to-peer directly between matched users via WebRTC. We do not record, store, or have access to your audio or video at any point.</p>
+      <p><strong style="color:#aaa">Matchmaking data:</strong> A temporary anonymous peer ID is generated each session and stored in Firebase Realtime Database to facilitate matching. This ID is deleted from our lobby queue immediately after a match is made.</p>
+      <p><strong style="color:#aaa">Ratings:</strong> Numerical ratings (1–10) you submit are stored in Firebase under your anonymous session ID linked to that match. Ratings are not tied to any personal identity.</p>
+      <p><strong style="color:#aaa">Signalling data:</strong> Temporary connection signals (e.g. "skip", "video-ready") are stored briefly in Firebase and automatically discarded.</p>
+      <p>We do not collect your name, email, IP address, or any personally identifiable information during normal use.</p>
+
+      <h3>4. Third-party services</h3>
+      <p>Rathe uses the following third-party services to operate. Their own privacy policies apply:</p>
+      <p>· <strong style="color:#aaa">Google Firebase</strong> — matchmaking & signalling database</p>
+      <p>· <strong style="color:#aaa">PeerJS / Render</strong> — WebRTC peer connection brokering</p>
+      <p>· <strong style="color:#aaa">Google Fonts</strong> — font delivery</p>
+
+      <h3>5. Acceptable use</h3>
+      <p>You agree not to use Rathe to: share illegal content; harass, threaten, or abuse other users; expose minors to the platform; attempt to record or screenshot other users without consent; or circumvent any platform restrictions.</p>
+      <p>Violations may result in immediate termination of your session and permanent ban.</p>
+
+      <h3>6. Beta disclaimer</h3>
+      <p>Rathe is in active beta development. The service is provided "as is" with no guarantee of uptime, data integrity, or feature availability. We may change, pause, or shut down the service at any time without notice.</p>
+
+      <h3>7. Limitation of liability</h3>
+      <p>To the maximum extent permitted by law, Rathe and its operators are not liable for any damages arising from your use of the platform, including but not limited to harmful content encountered during calls.</p>
+
+      <h3>8. Changes to these terms</h3>
+      <p>We may update these terms at any time. Continued use of the service after changes constitutes acceptance of the revised terms.</p>
+    </div>
+
+    <label class="tos-agree">
+      <input type="checkbox" id="tosCheck" onchange="onTosCheck()">
+      I am 18 or older and I agree to the Terms of Service
+    </label>
+
+    <button id="tosAcceptBtn" onclick="acceptTos()">ENTER RATHE</button>
+  </div>
+</div>
+
+<!-- ── REPORT MODAL ── -->
+<div id="reportModal">
+  <div class="report-box">
+    <h2>REPORT</h2>
+    <p>what's the issue with this user?</p>
+    <div class="report-reasons">
+      <label class="report-reason"><input type="radio" name="rr" value="Harassment / abuse"> harassment</label>
+      <label class="report-reason"><input type="radio" name="rr" value="Inappropriate content"> inappropriate</label>
+      <label class="report-reason"><input type="radio" name="rr" value="Underage user"> underage user</label>
+      <label class="report-reason"><input type="radio" name="rr" value="Spam / bot"> spam / bot</label>
+      <label class="report-reason" style="grid-column:span 2"><input type="radio" name="rr" value="Other"> other</label>
+    </div>
+    <textarea id="reportDetail" placeholder="add more context (optional)..."></textarea>
+    <div class="report-actions">
+      <button class="report-cancel-btn" onclick="closeReport()">CANCEL</button>
+      <button class="report-submit-btn" onclick="submitReport()">SEND REPORT</button>
+    </div>
+  </div>
+</div>
 
 <div id="reveal" style="display:none;">
   <div id="revealNum">3</div>
@@ -177,9 +323,9 @@ body::before {
 </div>
 <div id="toast"></div>
 
-<div class="app-wrapper">
+<button id="reportBtn" onclick="openReport()">⚑ REPORT</button>
 
-  <!-- VIDEO SIDE: two big squares, each 50vh, stacked -->
+<div class="app-wrapper">
   <div class="video-side" id="videoSide">
     <div class="user-slot">
       <video id="remoteVideo" autoplay playsinline></video>
@@ -195,42 +341,30 @@ body::before {
     </div>
   </div>
 
-  <!-- CONTROL SIDE -->
   <div class="control-side">
     <div class="container">
       <div id="timer">02:00</div>
-
       <div class="logo-row">
         <div class="logo">Rathe</div>
-        <!-- Wither Rose — Minecraft pixel art (16×16) -->
         <svg class="wither-rose" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-          <!-- stem -->
           <rect x="7" y="10" width="2" height="5" fill="#2e6b1e"/>
-          <!-- thorns -->
           <rect x="5" y="13" width="2" height="1" fill="#245416"/>
           <rect x="9" y="11" width="2" height="1" fill="#245416"/>
-          <!-- leaves -->
           <rect x="3" y="11" width="4" height="2" fill="#2e6b1e"/>
           <rect x="9" y="9"  width="4" height="2" fill="#2e6b1e"/>
-          <!-- outer petals — withered dark magenta -->
           <rect x="6" y="2" width="4" height="2" fill="#4a0e6e"/>
           <rect x="6" y="9" width="4" height="2" fill="#3a0a58"/>
           <rect x="3" y="5" width="2" height="4" fill="#3d0c62"/>
           <rect x="11" y="5" width="2" height="4" fill="#3d0c62"/>
-          <!-- diagonal petals -->
           <rect x="4" y="3" width="2" height="2" fill="#57117f"/>
           <rect x="10" y="3" width="2" height="2" fill="#57117f"/>
           <rect x="4" y="8" width="2" height="2" fill="#3a0a58"/>
           <rect x="10" y="8" width="2" height="2" fill="#3a0a58"/>
-          <!-- inner petals -->
           <rect x="6" y="4" width="4" height="5" fill="#220840"/>
-          <!-- dark core -->
           <rect x="7" y="5" width="2" height="3" fill="#0d0018"/>
-          <!-- highlight flecks -->
           <rect x="7" y="4" width="2" height="1" fill="#8b2fc9" opacity="0.9"/>
           <rect x="6" y="6" width="1" height="1" fill="#7a28b8" opacity="0.6"/>
           <rect x="9" y="7" width="1" height="1" fill="#7a28b8" opacity="0.6"/>
-          <!-- wither particle dots -->
           <rect x="2"  y="1" width="1" height="1" fill="#9333ea" opacity="0.8"/>
           <rect x="13" y="2" width="1" height="1" fill="#7e22ce" opacity="0.7"/>
           <rect x="4"  y="0" width="1" height="1" fill="#a855f7" opacity="0.6"/>
@@ -240,7 +374,6 @@ body::before {
           <rect x="13" y="9" width="1" height="1" fill="#7e22ce" opacity="0.4"/>
         </svg>
       </div>
-
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
       <button id="startBtn" class="main-btn">START MATCHING</button>
@@ -264,14 +397,63 @@ body::before {
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <script>
+/* ── TERMS OF SERVICE ── */
+const TOS_KEY = 'rathe_tos_v1';
+if (localStorage.getItem(TOS_KEY) === 'accepted') {
+  document.getElementById('tosModal').style.display = 'none';
+}
+
+function onTosCheck() {
+  const checked = document.getElementById('tosCheck').checked;
+  const btn = document.getElementById('tosAcceptBtn');
+  btn.classList.toggle('ready', checked);
+}
+
+function acceptTos() {
+  if (!document.getElementById('tosCheck').checked) return;
+  localStorage.setItem(TOS_KEY, 'accepted');
+  document.getElementById('tosModal').style.display = 'none';
+}
+
+/* ── REPORT ── */
+const REPORT_EMAIL = 'notwhyime@gmail.com';
+
+function openReport() {
+  document.getElementById('reportModal').style.display = 'flex';
+}
+function closeReport() {
+  document.getElementById('reportModal').style.display = 'none';
+  document.querySelectorAll('input[name="rr"]').forEach(r => r.checked = false);
+  document.getElementById('reportDetail').value = '';
+}
+function submitReport() {
+  const reason = document.querySelector('input[name="rr"]:checked');
+  if (!reason) { showToast('pick a reason first'); return; }
+  const detail = document.getElementById('reportDetail').value.trim();
+  const matchInfo = currentMatchId || 'unknown';
+  const subject = encodeURIComponent('[Rathe Report] ' + reason.value);
+  const body = encodeURIComponent(
+    'Reason: ' + reason.value + '\n' +
+    (detail ? 'Details: ' + detail + '\n' : '') +
+    'Match ID: ' + matchInfo + '\n' +
+    'Reporter peer ID: ' + (myId || 'unknown') + '\n' +
+    'Reported peer ID: ' + (partnerPeerId || 'unknown') + '\n' +
+    'Time: ' + new Date().toUTCString()
+  );
+  window.open('mailto:' + REPORT_EMAIL + '?subject=' + subject + '&body=' + body);
+  closeReport();
+  showToast('report sent — thank you');
+}
+
+/* ── FIREBASE & PEER ── */
 firebase.initializeApp({
-  apiKey:      "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
-  authDomain:  "rate-then-hate-backend.firebaseapp.com",
-  databaseURL: "https://rate-then-hate-backend-default-rtdb.firebaseio.com",
-  projectId:   "rate-then-hate-backend",
-  storageBucket:"rate-then-hate-backend.firebasestorage.app",
-  messagingSenderId:"195653571803",
-  appId:       "1:195653571803:web:6482704037cb0f2835e8fe"
+  apiKey:            "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
+  authDomain:        "rate-then-hate-backend.firebaseapp.com",
+  databaseURL:       "https://rate-then-hate-backend-default-rtdb.firebaseio.com",
+  projectId:         "rate-then-hate-backend",
+  storageBucket:     "rate-then-hate-backend.firebasestorage.app",
+  messagingSenderId: "195653571803",
+  appId:             "1:195653571803:web:6482704037cb0f2835e8fe"
 });
 const db = firebase.database();
 
@@ -294,7 +476,7 @@ let phase = 'idle';
 let searchInterval, sessionTimer, ratingTimer;
 let ratingSelected = false, ratingFired = false;
 let myRatingVal = null;
-let pendingVideoReady = false; // partner sent video-ready before we were ready
+let pendingVideoReady = false;
 
 const $ = id => document.getElementById(id);
 const setStatus = (msg, cls='') => { const el=$('statusLine'); el.className=cls; el.innerHTML=msg; };
@@ -303,6 +485,11 @@ function showToast(msg, dur=3000){
   setTimeout(()=>t.classList.remove('show'), dur);
 }
 function ratingColorClass(v){ return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue'; }
+
+/* show/hide report button based on active session */
+function setReportBtn(visible) {
+  $('reportBtn').style.display = visible ? 'block' : 'none';
+}
 
 peer.on('open', id => { myId=id; setStatus('ready when you are'); });
 peer.on('error', err => {
@@ -412,7 +599,6 @@ function handleCall(call){
       rs=new MediaStream();
       $('remoteVideo').srcObject=rs;
     }
-    // avoid duplicate tracks
     if(!rs.getTracks().find(t=>t.id===track.id)) rs.addTrack(track);
     $('remoteVideo').play().catch(()=>{});
     $('remoteVideo').classList.add('live');
@@ -439,6 +625,7 @@ function startSession(){
   setStatus('audio call — live','green');
   $('videoSide').classList.add('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
+  setReportBtn(true); // show report button during session
   let end=Date.now()+120_000;
   function tick(){
     const r=end-Date.now();
@@ -452,6 +639,7 @@ function startSession(){
 function showRating(){
   if(ratingFired) return; ratingFired=true; phase='rating';
   $('skipBtn').style.display='none'; $('cancelBtn').style.display='none'; $('timer').style.display='none';
+  setReportBtn(false);
   const screen=$('rating-screen'),grid=$('rateGrid'),title=$('ratingTitle'),fill=$('countdownFill');
   screen.style.display='flex'; grid.innerHTML=''; ratingSelected=false;
   for(let i=1;i<=10;i++){
@@ -474,10 +662,8 @@ function finishRating(val){
   if(phase!=='rating'||ratingSelected) return;
   ratingSelected=true; clearTimers();
   myRatingVal=val;
-  // MY rating = what I think of THEM → show on their (remote) camera
   showRatingBadge('remoteRating', val);
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
-  // THEIR rating = what they think of ME → show on my camera when it arrives
   db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
     const v=snap.val(); if(!v) return;
     showRatingBadge('myRating', v);
@@ -514,7 +700,7 @@ function startRevealCountdown(){
 async function upgradeToVideo(){
   if(phase==='video') return;
   phase='video';
-  pendingVideoReady=false; // consumed
+  pendingVideoReady=false;
   setStatus('enabling camera...','green');
   try{
     videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
@@ -523,11 +709,13 @@ async function upgradeToVideo(){
     setStatus('audio only mode','green');
     sendSignal('video-ready');
     $('skipBtn').style.display='block';
+    setReportBtn(true);
     return;
   }
   $('localVideo').srcObject=videoStream;
   $('localVideo').classList.add('live');
   $('videoSide').classList.add('active');
+  setReportBtn(true);
 
   const pc=currentCall&&currentCall.peerConnection;
   if(!pc){ sendSignal('video-ready'); setStatus('video call — live','green'); $('skipBtn').style.display='block'; return; }
@@ -555,21 +743,15 @@ async function upgradeToVideo(){
   $('skipBtn').style.display='block';
 }
 
-/* ── BUG FIX: accept video-ready signal at any post-session phase ── */
 function handleRemoteVideoReady(){
   if(phase==='rating'||phase==='reveal'){
-    // Partner is ready but we haven't finished rating/countdown yet — buffer it
     pendingVideoReady=true;
     return;
   }
-  // For session phase (partner triggered early) or video phase (both trigger upgrade)
   if(phase==='session'||phase==='video'){
     upgradeToVideo();
   }
 }
-
-// After upgradeToVideo runs, if partner had already signalled, nothing extra needed
-// because upgradeToVideo is what both sides call independently after their own countdown
 
 $('skipBtn').onclick  = ()=>{ sendSignal('skip'); reset(); };
 $('cancelBtn').onclick = ()=>{
@@ -579,6 +761,7 @@ $('cancelBtn').onclick = ()=>{
   phase='idle';
   $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
+  setReportBtn(false);
   setStatus('ready when you are','');
 };
 
@@ -602,6 +785,7 @@ function reset(){
   $('localVideo').srcObject=null;  $('localVideo').classList.remove('live');
   ['remoteRating','myRating'].forEach(id=>{ const el=$(id); if(el){el.style.display='none';el.className='rating-badge';} });
   myRatingVal=null;
+  setReportBtn(false);
   setStatus('ready when you are','');
 }
 </script>
