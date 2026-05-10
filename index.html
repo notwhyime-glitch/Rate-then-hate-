@@ -119,10 +119,16 @@ body::before {
 /* ── WAIT TIMER ── */
 #waitTimer {
   display: none;
-  font-size: 10px; letter-spacing: 2px; color: var(--muted);
-  text-transform: uppercase; margin-top: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 11px; letter-spacing: 2px; color: #888;
+  text-transform: uppercase;
+  margin-top: 0;
+  width: 100%;
 }
-#waitTimer span { color: #fff; }
+#waitTimer span { color: var(--green); font-weight: 500; }
 
 /* ── REPORT BUTTON ── */
 #reportBtn {
@@ -409,8 +415,8 @@ body::before {
       </div>
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
-      <div id="waitTimer">est. wait <span id="waitSecs">—</span></div>
       <button id="startBtn" class="main-btn">START MATCHING</button>
+      <div id="waitTimer" style="margin-top:14px;">est. wait &nbsp;<span id="waitSecs">—</span></div>
     </div>
   </div>
 </div>
@@ -436,50 +442,17 @@ const TOS_KEY = 'rathe_tos_v1';
 if (localStorage.getItem(TOS_KEY) === 'accepted') {
   document.getElementById('tosModal').style.display = 'none';
 }
-
 function onTosCheck() {
   const checked = document.getElementById('tosCheck').checked;
-  const btn = document.getElementById('tosAcceptBtn');
-  btn.classList.toggle('ready', checked);
+  document.getElementById('tosAcceptBtn').classList.toggle('ready', checked);
 }
-
 function acceptTos() {
   if (!document.getElementById('tosCheck').checked) return;
   localStorage.setItem(TOS_KEY, 'accepted');
   document.getElementById('tosModal').style.display = 'none';
 }
 
-/* ── REPORT ── */
-
-function openReport() {
-  document.getElementById('reportModal').style.display = 'flex';
-}
-function closeReport() {
-  document.getElementById('reportModal').style.display = 'none';
-  document.querySelectorAll('input[name="rr"]').forEach(r => r.checked = false);
-  document.getElementById('reportDetail').value = '';
-}
-function submitReport() {
-  const reason = document.querySelector('input[name="rr"]:checked');
-  if (!reason) { showToast('pick a reason first'); return; }
-  const detail = document.getElementById('reportDetail').value.trim();
-  const report = {
-    reason: reason.value,
-    detail: detail || null,
-    matchId: currentMatchId || 'unknown',
-    reporterPeerId: myId || 'unknown',
-    reportedPeerId: partnerPeerId || 'unknown',
-    ts: Date.now(),
-    tsReadable: new Date().toUTCString(),
-    status: 'open'
-  };
-  db.ref('reports').push(report)
-    .then(() => { showToast('report sent — thank you'); })
-    .catch(() => { showToast('failed to send report — try again'); });
-  closeReport();
-}
-
-/* ── FIREBASE & PEER ── */
+/* ── FIREBASE ── */
 firebase.initializeApp({
   apiKey:            "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
   authDomain:        "rate-then-hate-backend.firebaseapp.com",
@@ -493,16 +466,40 @@ const db = firebase.database();
 
 /* ── ONLINE COUNTER ── */
 function initOnlineCounter(){
-  const myPresenceRef = db.ref('online/' + Math.random().toString(36).slice(2));
-  myPresenceRef.set(true);
-  myPresenceRef.onDisconnect().remove();
+  const ref = db.ref('online/' + Math.random().toString(36).slice(2));
+  ref.set(true);
+  ref.onDisconnect().remove();
   db.ref('online').on('value', snap => {
-    const count = snap.numChildren();
-    document.getElementById('onlineCount').innerText = count;
+    document.getElementById('onlineCount').innerText = snap.numChildren();
   });
 }
 initOnlineCounter();
 
+/* ── REPORT ── */
+function openReport()  { document.getElementById('reportModal').style.display = 'flex'; }
+function closeReport() {
+  document.getElementById('reportModal').style.display = 'none';
+  document.querySelectorAll('input[name="rr"]').forEach(r => r.checked = false);
+  document.getElementById('reportDetail').value = '';
+}
+function submitReport() {
+  const reason = document.querySelector('input[name="rr"]:checked');
+  if (!reason) { showToast('pick a reason first'); return; }
+  db.ref('reports').push({
+    reason: reason.value,
+    detail: document.getElementById('reportDetail').value.trim() || null,
+    matchId: currentMatchId || 'unknown',
+    reporterPeerId: myId || 'unknown',
+    reportedPeerId: partnerPeerId || 'unknown',
+    ts: Date.now(),
+    tsReadable: new Date().toUTCString(),
+    status: 'open'
+  }).then(() => showToast('report sent — thank you'))
+    .catch(() => showToast('failed to send — try again'));
+  closeReport();
+}
+
+/* ── PEER SETUP ── */
 function createPeer() {
   return new Peer(undefined, {
     host: 'my-peer-server-mjl5.onrender.com', port: 443, path: '/peerjs',
@@ -516,13 +513,13 @@ function createPeer() {
 }
 
 let peer = null;
-let myId, myLobbyKey, localStream, videoStream;
-let partnerPeerId, currentMatchId, currentCall, signalRef;
+let myId = null, myLobbyKey = null, localStream = null, videoStream = null;
+let partnerPeerId = null, currentMatchId = null, currentCall = null, signalRef = null;
 let phase = 'idle';
-let searchInterval, sessionTimer, ratingTimer;
-let ratingSelected = false, ratingFired = false;
-let myRatingVal = null;
-let pendingVideoReady = false;
+let searchInterval = null, sessionTimer = null, ratingTimer = null, waitInterval = null;
+let ratingSelected = false, ratingFired = false, sessionStarted = false;
+let myRatingVal = null, pendingVideoReady = false;
+let callRetryCount = 0;
 
 const $ = id => document.getElementById(id);
 const setStatus = (msg, cls='') => { const el=$('statusLine'); el.className=cls; el.innerHTML=msg; };
@@ -531,69 +528,126 @@ function showToast(msg, dur=3000){
   setTimeout(()=>t.classList.remove('show'), dur);
 }
 function ratingColorClass(v){ return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue'; }
+function setReportBtn(visible){ $('reportBtn').style.display = visible ? 'block' : 'none'; }
 
-function setReportBtn(visible) {
-  $('reportBtn').style.display = visible ? 'block' : 'none';
+function stopWaitTimer(){
+  if(waitInterval){ clearInterval(waitInterval); waitInterval=null; }
+  $('waitTimer').style.display='none';
+}
+
+/* ── WAIT TIMER — estimates based on how long others have been waiting ── */
+function startWaitTimer(){
+  stopWaitTimer();
+  const el=$('waitTimer'), num=$('waitSecs');
+  el.style.display='block';
+  num.innerText='calculating...';
+  waitInterval = setInterval(()=>{
+    if(phase!=='searching'){ stopWaitTimer(); return; }
+    db.ref('lobby').once('value').then(snap=>{
+      const entries = snap.val();
+      if(!entries){ num.innerText='no one else yet'; return; }
+      const others = Object.values(entries).filter(id=>id!==myId);
+      if(others.length > 0){
+        num.innerText='any second now';
+        return;
+      }
+      // nobody else in lobby — estimate based on average session length
+      // sessions are 2 mins, so if X people are online not in lobby, avg wait = 120/X
+      const online = parseInt(document.getElementById('onlineCount').innerText)||1;
+      const inLobby = Object.keys(entries).length;
+      const inSession = Math.max(0, online - inLobby);
+      if(inSession <= 0){
+        num.innerText='waiting for someone...';
+      } else {
+        const estSecs = Math.round(120 / inSession);
+        num.innerText = estSecs <= 10 ? 'under 10s' :
+                        estSecs <= 30 ? 'under 30s' :
+                        estSecs <= 60 ? 'under 1 min' : 'a few minutes';
+      }
+    }).catch(()=>{ num.innerText='—'; });
+  }, 2000);
+  // run once immediately
+  waitInterval && clearInterval(waitInterval);
+  db.ref('lobby').once('value').then(snap=>{
+    if(phase!=='searching') return;
+    const entries = snap.val();
+    const others = entries ? Object.values(entries).filter(id=>id!==myId) : [];
+    if(others.length > 0){ num.innerText='any second now'; }
+    else { num.innerText='waiting for someone...'; }
+  });
+  waitInterval = setInterval(()=>{
+    if(phase!=='searching'){ stopWaitTimer(); return; }
+    db.ref('lobby').once('value').then(snap=>{
+      if(phase!=='searching') return;
+      const entries = snap.val();
+      const others = entries ? Object.values(entries).filter(id=>id!==myId) : [];
+      if(others.length > 0){ num.innerText='any second now'; return; }
+      const online = parseInt(document.getElementById('onlineCount').innerText)||1;
+      const inLobby = entries ? Object.keys(entries).length : 1;
+      const inSession = Math.max(0, online - inLobby);
+      if(inSession <= 0){
+        num.innerText='waiting for someone...';
+      } else {
+        const estSecs = Math.round(120 / inSession);
+        num.innerText = estSecs <= 10 ? 'under 10s' :
+                        estSecs <= 30 ? 'under 30s' :
+                        estSecs <= 60 ? 'under 1 min' : 'a few minutes';
+      }
+    });
+  }, 3000);
 }
 
 function initPeer(){
   if(peer){ try{ peer.destroy(); }catch(e){} peer=null; }
   myId = null;
   peer = createPeer();
-  peer.on('open', id => {
-    myId = id;
-    setStatus('ready when you are');
-  });
+  peer.on('open', id => { myId=id; setStatus('ready when you are'); });
   peer.on('error', err => {
     console.error('PeerJS error', err);
     if(err.type==='peer-unavailable'){
-      // only treat as real disconnect if we're actually in a session
-      // during searching/connecting it just means the peer ID wasn't ready yet — ignore it
       if(phase==='session'||phase==='video'||phase==='rating'||phase==='reveal'){
-        showToast('partner disconnected');
-        reset();
+        showToast('partner disconnected'); reset();
       } else if(phase==='connecting'){
-        // partner peer not ready yet — wait and retry the call
-        showToast('connection hiccup — retrying...');
-        setTimeout(()=>{
-          if(phase==='connecting'&&partnerPeerId) initiateCall();
-        }, 2000);
+        // peer ID not registered yet on PeerJS server — retry up to 5 times with backoff
+        callRetryCount++;
+        if(callRetryCount <= 5){
+          const delay = callRetryCount * 1000;
+          setStatus(`connecting... (${callRetryCount}/5)`,'green');
+          setTimeout(()=>{ if(phase==='connecting'&&partnerPeerId) initiateCall(); }, delay);
+        } else {
+          showToast('could not connect — going back to search');
+          reset();
+        }
       }
-      // if searching or idle, just ignore — stale peer ID from lobby
-    } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'||err.type==='socket-closed'){
-      if(phase==='idle'||phase==='searching'){
-        setTimeout(()=>{ initPeer(); }, 2000);
-      }
+      // searching/idle: stale lobby ID, ignore
+    } else if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
+      if(phase==='idle'||phase==='searching') setTimeout(initPeer, 2000);
     } else {
-      if(phase==='idle'||phase==='searching'){
-        setTimeout(()=>{ initPeer(); }, 2000);
-      }
+      if(phase==='idle'||phase==='searching') setTimeout(initPeer, 2000);
     }
   });
   peer.on('disconnected', ()=>{
     if(phase==='idle'||phase==='searching'){
-      setTimeout(()=>{
-        try{ peer.reconnect(); }catch(e){ initPeer(); }
-      }, 1500);
+      setTimeout(()=>{ try{ peer.reconnect(); }catch(e){ initPeer(); } }, 1500);
     }
   });
   peer.on('call', handleIncomingCall);
 }
-
 initPeer();
 
 function clearTimers(){
-  if(searchInterval){clearInterval(searchInterval);searchInterval=null;}
-  if(sessionTimer)  {clearInterval(sessionTimer);  sessionTimer=null;}
-  if(ratingTimer)   {clearInterval(ratingTimer);   ratingTimer=null;}
+  if(searchInterval){ clearInterval(searchInterval); searchInterval=null; }
+  if(sessionTimer)  { clearInterval(sessionTimer);   sessionTimer=null; }
+  if(ratingTimer)   { clearInterval(ratingTimer);    ratingTimer=null; }
+  stopWaitTimer();
 }
-function stopSignalListener(){ if(signalRef){signalRef.off();signalRef=null;} }
+function stopSignalListener(){ if(signalRef){ signalRef.off(); signalRef=null; } }
 
 function listenForPartnerSignals(){
   if(!currentMatchId||!partnerPeerId) return;
   signalRef = db.ref(`matches/${currentMatchId}/signals/${partnerPeerId}`);
   signalRef.on('value', snap => {
-    const val = snap.val(); if(!val) return;
+    const val=snap.val(); if(!val) return;
     if(val==='skip')        { showToast('they skipped you 💀'); reset(); }
     if(val==='video-ready') { handleRemoteVideoReady(); }
   });
@@ -602,27 +656,27 @@ function listenForPartnerSignals(){
     const val=snap.val(), pc=currentCall&&currentCall.peerConnection;
     if(!pc||!val) return;
     if(val.offer){
-      if(negotiating) return;
-      if(pc.signalingState!=='stable') return;
+      if(negotiating||pc.signalingState!=='stable') return;
       negotiating=true;
       try{
         await pc.setRemoteDescription(new RTCSessionDescription(val.offer));
         const ans=await pc.createAnswer();
         await pc.setLocalDescription(ans);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/answer`).set({sdp:ans.sdp,type:ans.type});
-      }catch(e){console.error('offer handling',e);}
+      }catch(e){ console.error('offer handling',e); }
       finally{ negotiating=false; }
     }
     if(val.answer){
       if(pc.signalingState!=='have-local-offer') return;
       try{ await pc.setRemoteDescription(new RTCSessionDescription(val.answer)); }
-      catch(e){console.error('answer handling',e);}
+      catch(e){ console.error('answer handling',e); }
     }
   });
 }
 
 function sendSignal(type){ if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/signals/${myId}`).set(type); }
 
+/* ── START MATCHING ── */
 $('startBtn').onclick = async () => {
   if(phase!=='idle') return;
   try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
@@ -632,23 +686,7 @@ $('startBtn').onclick = async () => {
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
   setStatus('scanning the void','green');
   $('cancelBtn').style.display='block';
-  // start wait timer
-  let waitSecs=0;
-  const waitEl=$('waitTimer'), waitNum=$('waitSecs');
-  waitEl.style.display='block'; waitNum.innerText='0s';
-  const waitTick=setInterval(()=>{
-    if(phase!=='searching'){ clearInterval(waitTick); waitEl.style.display='none'; return; }
-    waitSecs++;
-    // estimate based on lobby size: if others are waiting, shorter estimate
-    db.ref('lobby').once('value').then(s=>{
-      const count=s.numChildren();
-      if(count>1){
-        waitNum.innerText='any second...';
-      } else {
-        waitNum.innerText=waitSecs+'s';
-      }
-    }).catch(()=>{ waitNum.innerText=waitSecs+'s'; });
-  },1000);
+  startWaitTimer();
   const ref=db.ref('lobby').push(myId);
   myLobbyKey=ref.key;
   searchInterval=setInterval(tryMatch,2000);
@@ -666,45 +704,51 @@ async function tryMatch(){
     await matchRef.transaction(cur=>{ if(cur!==null) return; won=true; return{a:myId,b:pid,status:'locked',ts:Date.now()}; });
     if(!won) continue;
     db.ref(`lobby/${k}`).remove();
-    if(myLobbyKey) db.ref(`lobby/${myLobbyKey}`).remove();
+    if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
     partnerPeerId=pid; currentMatchId=matchId; phase='connecting';
     clearInterval(searchInterval); searchInterval=null;
+    callRetryCount=0;
+    stopWaitTimer();
     setStatus('matched — connecting','green');
     listenForPartnerSignals();
-    // short delay so PeerJS registers the peer ID before the call attempt
-    setTimeout(initiateCall, 400);
+    initiateCall();
     return;
   }
 }
 
 async function handleIncomingCall(call){
-  if(phase==='session'||phase==='rating'||phase==='video'){call.close();return;}
+  if(phase==='session'||phase==='rating'||phase==='video'){ call.close(); return; }
   if(!localStream){
     try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
-    catch(e){call.close();return;}
+    catch(e){ call.close(); return; }
   }
   partnerPeerId=call.peer;
   currentMatchId=[myId,partnerPeerId].sort().join('_');
   phase='connecting';
-  if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
   clearInterval(searchInterval); searchInterval=null;
+  callRetryCount=0;
+  stopWaitTimer();
   $('startBtn').classList.add('searching');
   setStatus('matched — connecting','green');
   $('cancelBtn').style.display='none';
   call.answer(localStream);
   listenForPartnerSignals();
   handleCall(call);
-  // safety net: if stream fires before handleCall sets up listener, start session anyway
-  setTimeout(()=>{ if(phase==='connecting') startSession(); }, 4000);
 }
 
-function initiateCall(){ const call=peer.call(partnerPeerId,localStream); handleCall(call); }
+function initiateCall(){
+  if(!peer||!partnerPeerId||!localStream) return;
+  // don't reset retry count here — let it accumulate across retries
+  const call=peer.call(partnerPeerId,localStream);
+  handleCall(call);
+}
 
+/* ── CHEER SOUND ── */
 function playCheer(){
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const notes=[523,659,784,1047];
-    notes.forEach((freq,i)=>{
+    [523,659,784,1047].forEach((freq,i)=>{
       const o=ctx.createOscillator(), g=ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
       o.frequency.value=freq; o.type='sine';
@@ -714,7 +758,6 @@ function playCheer(){
       g.gain.linearRampToValueAtTime(0,t+0.18);
       o.start(t); o.stop(t+0.2);
     });
-    // crowd roar using filtered noise burst
     const buf=ctx.createBuffer(1,ctx.sampleRate*0.6,ctx.sampleRate);
     const data=buf.getChannelData(0);
     for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.5);
@@ -725,6 +768,7 @@ function playCheer(){
   }catch(e){}
 }
 
+/* ── HANDLE CALL ── */
 function handleCall(call){
   currentCall=call;
 
@@ -738,65 +782,61 @@ function handleCall(call){
       vid.play().then(()=>{
         vid.classList.add('live');
         document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-      }).catch(()=>{ setTimeout(tryPlay,300); });
+      }).catch(()=>setTimeout(tryPlay,300));
     }
     tryPlay();
   }
 
   call.on('stream', remoteStream => {
     $('remoteAudio').srcObject=remoteStream;
-    const vt=remoteStream.getVideoTracks();
-    if(vt.length>0){ vt.forEach(t=>attachRemoteVideo(t)); }
-    // fire startSession for both 'connecting' and cases where stream arrives slightly late
-    if(phase==='connecting'||phase==='searching'){ startSession(); }
+    remoteStream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
+    if(phase==='connecting') startSession();
   });
 
   const waitForPc=setInterval(()=>{
     const pc=call.peerConnection; if(!pc) return;
     clearInterval(waitForPc);
-    pc.addEventListener('track',e=>{
+    pc.addEventListener('track', e=>{
       if(e.track.kind!=='video') return;
       attachRemoteVideo(e.track);
       if(e.streams&&e.streams[0]) e.streams[0].getVideoTracks().forEach(t=>attachRemoteVideo(t));
     });
-    // fallback poll — catches video tracks added after a delay (e.g. mobile permission prompt)
+    // poll for late video tracks (delayed camera permission on mobile)
     const pollTracks=setInterval(()=>{
       if(phase==='idle'){ clearInterval(pollTracks); return; }
-      const receivers=pc.getReceivers();
-      receivers.forEach(r=>{
-        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
-          attachRemoteVideo(r.track);
-        }
+      pc.getReceivers().forEach(r=>{
+        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live') attachRemoteVideo(r.track);
       });
     }, 800);
-  },50);
+  }, 50);
 
-  call.on('close',()=>{
-    // don't reset during rating/reveal/video — camera permission delays can cause
-    // temporary signalling gaps that look like a close event but aren't a real disconnect
+  call.on('close', ()=>{
     if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
     reset();
   });
-  call.on('error',(err)=>{
-    console.warn('call error',err);
+  call.on('error', err=>{
+    console.warn('call error', err);
     if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
     reset();
   });
 }
 
+/* ── SESSION ── */
 function startSession(){
+  if(sessionStarted) return; // guard against double-call
+  sessionStarted=true;
   phase='session';
   $('startBtn').classList.remove('searching'); $('startBtn').style.display='none';
   $('timer').style.display='block'; $('skipBtn').style.display='block';
   setStatus('audio call — live','green');
   $('videoSide').classList.add('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
-  setReportBtn(true); // show report button during session
+  setReportBtn(true);
   watchForDisconnect();
   let end=Date.now()+120_000;
   function tick(){
     const r=end-Date.now();
-    if(r<=0){clearInterval(sessionTimer);sessionTimer=null;showRating();return;}
+    if(r<=0){ clearInterval(sessionTimer); sessionTimer=null; showRating(); return; }
     const s=Math.floor(r/1000);
     $('timer').innerText=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
   }
@@ -816,11 +856,11 @@ function showRating(){
     grid.appendChild(b);
   }
   fill.style.width='100%';
-  setTimeout(()=>{fill.style.width='0%';},50);
+  setTimeout(()=>{ fill.style.width='0%'; },50);
   let countdown=10; title.innerText=`RATE THEM (${countdown})`;
   ratingTimer=setInterval(()=>{
     if(ratingSelected) return;
-    countdown--; if(countdown<=0){finishRating(5);return;}
+    countdown--; if(countdown<=0){ finishRating(5); return; }
     title.innerText=`RATE THEM (${countdown})`;
   },1000);
 }
@@ -845,7 +885,7 @@ function showRatingBadge(id,val){
   el.innerText=val; el.className='rating-badge '+ratingColorClass(val);
   el.style.display='block';
   setTimeout(()=>el.classList.add('show'),50);
-  if(id==='myRating' && val===10) setTimeout(playCheer,400);
+  if(id==='myRating'&&val===10) setTimeout(playCheer,400);
 }
 
 function startRevealCountdown(){
@@ -854,12 +894,7 @@ function startRevealCountdown(){
   setStatus('video reveal incoming','red');
   const tick=setInterval(()=>{
     count--;
-    if(count<=0){
-      clearInterval(tick);
-      overlay.style.display='none';
-      upgradeToVideo();
-      return;
-    }
+    if(count<=0){ clearInterval(tick); overlay.style.display='none'; upgradeToVideo(); return; }
     numEl.innerText=count;
     numEl.style.animation='none'; void numEl.offsetWidth; numEl.style.animation='pop .3s ease';
   },1000);
@@ -893,7 +928,6 @@ async function upgradeToVideo(){
   const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
   if(audioSender&&audioTrack) await audioSender.replaceTrack(audioTrack);
 
-  // only the peer with the lower ID drives the offer to avoid glare
   if(myId<partnerPeerId){
     let offerPending=false;
     pc.onnegotiationneeded=async()=>{
@@ -904,7 +938,7 @@ async function upgradeToVideo(){
         if(pc.signalingState!=='stable'){ offerPending=false; return; }
         await pc.setLocalDescription(offer);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/offer`).set({sdp:offer.sdp,type:offer.type});
-      }catch(e){console.error('offer error',e);}
+      }catch(e){ console.error('offer error',e); }
       finally{ offerPending=false; }
     };
   }
@@ -918,32 +952,22 @@ async function upgradeToVideo(){
 }
 
 function watchForDisconnect(){
-  // use Firebase presence as a reliable disconnect signal post-rating
-  // so we're not dependent on WebRTC close events which misfire during camera negotiation
   if(!currentMatchId||!partnerPeerId) return;
-  db.ref(`matches/${currentMatchId}/presence/${partnerPeerId}`).onDisconnect();
   db.ref(`matches/${currentMatchId}/presence/${myId}`).set(true);
   db.ref(`matches/${currentMatchId}/presence/${myId}`).onDisconnect().remove();
   db.ref(`matches/${currentMatchId}/presence/${partnerPeerId}`).on('value', snap=>{
-    // if partner presence disappears after we're in video phase, they actually left
-    if(snap.val()===null && (phase==='video'||phase==='session')){
-      showToast('they disconnected');
-      reset();
+    if(snap.val()===null&&(phase==='video'||phase==='session')){
+      showToast('they disconnected'); reset();
     }
   });
 }
 
 function handleRemoteVideoReady(){
-  if(phase==='rating'||phase==='reveal'){
-    pendingVideoReady=true;
-    return;
-  }
-  if(phase==='session'||phase==='video'){
-    upgradeToVideo();
-  }
+  if(phase==='rating'||phase==='reveal'){ pendingVideoReady=true; return; }
+  if(phase==='session'||phase==='video') upgradeToVideo();
 }
 
-$('skipBtn').onclick  = ()=>{ sendSignal('skip'); reset(); };
+$('skipBtn').onclick   = ()=>{ sendSignal('skip'); reset(); };
 $('cancelBtn').onclick = ()=>{
   clearTimers();
   if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
@@ -951,19 +975,19 @@ $('cancelBtn').onclick = ()=>{
   phase='idle';
   $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
-  $('waitTimer').style.display='none';
   setReportBtn(false);
   setStatus('ready when you are','');
 };
 
 function reset(){
   clearTimers(); stopSignalListener();
-  if(currentCall){try{currentCall.close();}catch(e){} currentCall=null;}
-  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
-  if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+  if(currentCall){ try{ currentCall.close(); }catch(e){} currentCall=null; }
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  if(videoStream){ videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
+  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
+  if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
   phase='idle'; partnerPeerId=null; currentMatchId=null;
-  ratingFired=false; ratingSelected=false; pendingVideoReady=false;
+  ratingFired=false; ratingSelected=false; pendingVideoReady=false; sessionStarted=false; callRetryCount=0;
   $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING';
   $('timer').style.display='none'; $('timer').innerText='02:00';
@@ -974,13 +998,10 @@ function reset(){
   $('remoteAudio').srcObject=null;
   $('remoteVideo').srcObject=null; $('remoteVideo').classList.remove('live');
   $('localVideo').srcObject=null;  $('localVideo').classList.remove('live');
-  ['remoteRating','myRating'].forEach(id=>{ const el=$(id); if(el){el.style.display='none';el.className='rating-badge';} });
+  ['remoteRating','myRating'].forEach(id=>{ const el=$(id); if(el){ el.style.display='none'; el.className='rating-badge'; } });
   myRatingVal=null;
   setReportBtn(false);
-  // clean up presence node
-  if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
   setStatus('ready when you are','');
-  // always reinit peer after a session so it's clean for next match
   setTimeout(initPeer, 300);
 }
 </script>
