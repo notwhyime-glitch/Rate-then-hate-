@@ -202,6 +202,27 @@ body::before {
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 24px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #fff; z-index: 99999; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── ONLINE COUNTER ── */
+#onlineCounter {
+  position: fixed; bottom: 20px; right: 20px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.6); border: 1px solid #1f1f1f;
+  border-radius: 20px; padding: 7px 14px;
+  font-size: 10px; letter-spacing: 2px; color: var(--muted);
+  text-transform: uppercase; z-index: 9980;
+  backdrop-filter: blur(8px);
+  transition: opacity .3s ease;
+}
+#onlineCounter .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(0,255,135,0.8);
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#onlineCount { color: #fff; font-weight: 500; }
+
 /* ── TERMS MODAL ── */
 #tosModal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.97);
@@ -324,6 +345,10 @@ body::before {
 <div id="toast"></div>
 
 <button id="reportBtn" onclick="openReport()">⚑ REPORT</button>
+<div id="onlineCounter">
+  <div class="dot"></div>
+  <span id="onlineCount">0</span>&nbsp;online
+</div>
 
 <div class="app-wrapper">
   <div class="video-side" id="videoSide">
@@ -456,6 +481,18 @@ firebase.initializeApp({
   appId:             "1:195653571803:web:6482704037cb0f2835e8fe"
 });
 const db = firebase.database();
+
+/* ── ONLINE COUNTER ── */
+function initOnlineCounter(){
+  const myPresenceRef = db.ref('online/' + Math.random().toString(36).slice(2));
+  myPresenceRef.set(true);
+  myPresenceRef.onDisconnect().remove();
+  db.ref('online').on('value', snap => {
+    const count = snap.numChildren();
+    document.getElementById('onlineCount').innerText = count;
+  });
+}
+initOnlineCounter();
 
 function createPeer() {
   return new Peer(undefined, {
@@ -655,6 +692,16 @@ function handleCall(call){
       attachRemoteVideo(e.track);
       if(e.streams&&e.streams[0]) e.streams[0].getVideoTracks().forEach(t=>attachRemoteVideo(t));
     });
+    // fallback poll — catches video tracks added after a delay (e.g. mobile permission prompt)
+    const pollTracks=setInterval(()=>{
+      if(phase==='idle'){ clearInterval(pollTracks); return; }
+      const receivers=pc.getReceivers();
+      receivers.forEach(r=>{
+        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
+          attachRemoteVideo(r.track);
+        }
+      });
+    }, 800);
   },50);
 
   call.on('close',()=>{
