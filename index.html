@@ -773,6 +773,8 @@ function playCheer(){
 /* ── HANDLE CALL ── */
 function handleCall(call){
   currentCall=call;
+  let remoteAudioAttached = false;
+  let sessionTriggered = false;
 
   function attachRemoteVideo(track){
     const vid=$('remoteVideo');
@@ -789,35 +791,90 @@ function handleCall(call){
     tryPlay();
   }
 
-  call.on('stream', remoteStream => {
-    $('remoteAudio').srcObject=remoteStream;
-    remoteStream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
-    if(phase==='connecting') startSession();
-  });
+  function tryStartSession(){
+    if(sessionTriggered) return;
+    if(phase!=='connecting') return;
+    sessionTriggered=true;
+    startSession();
+  }
 
+  // PeerJS 1.5+ — use RTCPeerConnection track events directly
+  // poll until peerConnection is available (it's set async internally)
   const waitForPc=setInterval(()=>{
     const pc=call.peerConnection; if(!pc) return;
     clearInterval(waitForPc);
+
     pc.addEventListener('track', e=>{
-      if(e.track.kind!=='video') return;
-      attachRemoteVideo(e.track);
-      if(e.streams&&e.streams[0]) e.streams[0].getVideoTracks().forEach(t=>attachRemoteVideo(t));
+      console.log('[rathe] track event:', e.track.kind, e.track.readyState);
+      const stream = e.streams && e.streams[0];
+
+      if(e.track.kind==='audio'){
+        // attach audio stream to audio element
+        if(!remoteAudioAttached && stream){
+          $('remoteAudio').srcObject=stream;
+          remoteAudioAttached=true;
+        }
+        // audio track = connection established, start session
+        tryStartSession();
+      }
+
+      if(e.track.kind==='video'){
+        attachRemoteVideo(e.track);
+        if(stream) stream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
+      }
     });
-    // poll for late video tracks (delayed camera permission on mobile)
+
+    // ICE connection state — start session as soon as ICE is connected
+    pc.addEventListener('iceconnectionstatechange', ()=>{
+      console.log('[rathe] ICE state:', pc.iceConnectionState);
+      if(pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed'){
+        tryStartSession();
+      }
+      if(pc.iceConnectionState==='failed'||pc.iceConnectionState==='disconnected'){
+        if(phase==='connecting'){
+          // try ICE restart
+          console.log('[rathe] ICE failed, attempting restart');
+          pc.restartIce && pc.restartIce();
+        }
+      }
+    });
+
+    // poll for late video tracks (mobile delayed camera permission)
     const pollTracks=setInterval(()=>{
       if(phase==='idle'){ clearInterval(pollTracks); return; }
       pc.getReceivers().forEach(r=>{
         if(r.track&&r.track.kind==='video'&&r.track.readyState==='live') attachRemoteVideo(r.track);
       });
+      // also attach audio if missed
+      if(!remoteAudioAttached){
+        const audioReceiver=pc.getReceivers().find(r=>r.track&&r.track.kind==='audio'&&r.track.readyState==='live');
+        if(audioReceiver){
+          const s=new MediaStream([audioReceiver.track]);
+          $('remoteAudio').srcObject=s;
+          remoteAudioAttached=true;
+          tryStartSession();
+        }
+      }
     }, 800);
   }, 50);
+
+  // keep stream event as fallback for older PeerJS behaviour
+  call.on('stream', remoteStream => {
+    console.log('[rathe] stream event fired (legacy)');
+    if(!remoteAudioAttached){
+      $('remoteAudio').srcObject=remoteStream;
+      remoteAudioAttached=true;
+    }
+    remoteStream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
+    tryStartSession();
+  });
 
   call.on('close', ()=>{
     if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
     reset();
   });
   call.on('error', err=>{
-    console.warn('call error', err);
+    console.warn('[rathe] call error', err);
     if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
     reset();
   });
