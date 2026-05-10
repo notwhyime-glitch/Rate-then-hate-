@@ -514,18 +514,24 @@ function listenForPartnerSignals(){
     if(val==='skip')        { showToast('they skipped you 💀'); reset(); }
     if(val==='video-ready') { handleRemoteVideoReady(); }
   });
+  let negotiating=false;
   db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value', async snap => {
     const val=snap.val(), pc=currentCall&&currentCall.peerConnection;
     if(!pc||!val) return;
-    if(val.offer && pc.signalingState==='stable'){
+    if(val.offer){
+      if(negotiating) return;
+      if(pc.signalingState!=='stable') return;
+      negotiating=true;
       try{
         await pc.setRemoteDescription(new RTCSessionDescription(val.offer));
         const ans=await pc.createAnswer();
         await pc.setLocalDescription(ans);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/answer`).set({sdp:ans.sdp,type:ans.type});
       }catch(e){console.error('offer handling',e);}
+      finally{ negotiating=false; }
     }
-    if(val.answer && pc.signalingState==='have-local-offer'){
+    if(val.answer){
+      if(pc.signalingState!=='have-local-offer') return;
       try{ await pc.setRemoteDescription(new RTCSessionDescription(val.answer)); }
       catch(e){console.error('answer handling',e);}
     }
@@ -773,13 +779,19 @@ async function upgradeToVideo(){
   const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
   if(audioSender&&audioTrack) await audioSender.replaceTrack(audioTrack);
 
+  // only the peer with the lower ID drives the offer to avoid glare
   if(myId<partnerPeerId){
+    let offerPending=false;
     pc.onnegotiationneeded=async()=>{
+      if(offerPending||pc.signalingState!=='stable') return;
+      offerPending=true;
       try{
         const offer=await pc.createOffer();
+        if(pc.signalingState!=='stable'){ offerPending=false; return; }
         await pc.setLocalDescription(offer);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/offer`).set({sdp:offer.sdp,type:offer.type});
       }catch(e){console.error('offer error',e);}
+      finally{ offerPending=false; }
     };
   }
   const existingSender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
