@@ -816,6 +816,7 @@ function handleCall(call){
   }
 
   function tryStartSession(){
+    console.log('[rathe] tryStartSession called, phase='+phase+', sessionTriggered='+sessionTriggered+', sessionStarted='+sessionStarted);
     if(sessionTriggered) return;
     if(phase!=='connecting') return;
     sessionTriggered=true;
@@ -884,7 +885,7 @@ function handleCall(call){
 
   // keep stream event as fallback for older PeerJS behaviour
   call.on('stream', remoteStream => {
-    console.log('[rathe] stream event fired (legacy)');
+    console.log('[rathe] stream event fired (legacy), phase='+phase+', sessionTriggered='+sessionTriggered+', sessionStarted='+sessionStarted);
     if(!remoteAudioAttached){
       $('remoteAudio').srcObject=remoteStream;
       remoteAudioAttached=true;
@@ -1038,7 +1039,12 @@ function watchForDisconnect(){
   if(!currentMatchId||!partnerPeerId) return;
   db.ref(`matches/${currentMatchId}/presence/${myId}`).set(true);
   db.ref(`matches/${currentMatchId}/presence/${myId}`).onDisconnect().remove();
+  // wait 4 seconds before watching partner presence
+  // gives both sides time to write their presence node before we start checking
+  let presenceReady = false;
+  setTimeout(()=>{ presenceReady = true; }, 4000);
   db.ref(`matches/${currentMatchId}/presence/${partnerPeerId}`).on('value', snap=>{
+    if(!presenceReady) return; // ignore early null before they've written their presence
     if(snap.val()===null&&(phase==='video'||phase==='session')){
       showToast('they disconnected'); reset();
     }
