@@ -713,7 +713,12 @@ async function tryMatch(){
     stopWaitTimer();
     setStatus('matched — connecting','green');
     listenForPartnerSignals();
-    initiateCall();
+    // only the peer with the HIGHER id calls — the other waits for incoming call
+    // this prevents both sides calling each other simultaneously
+    if(myId > pid){
+      initiateCall();
+    }
+    // lower id peer just listens — handleIncomingCall will fire
     return;
   }
 }
@@ -724,9 +729,11 @@ async function handleIncomingCall(call){
     try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
     catch(e){ call.close(); return; }
   }
-  partnerPeerId=call.peer;
-  currentMatchId=[myId,partnerPeerId].sort().join('_');
-  phase='connecting';
+  // if we already set partnerPeerId from tryMatch (lower id peer waiting), keep it
+  // otherwise this is a cold incoming call from outside our match flow
+  if(!partnerPeerId) partnerPeerId=call.peer;
+  if(!currentMatchId) currentMatchId=[myId,partnerPeerId].sort().join('_');
+  if(phase!=='connecting') phase='connecting';
   if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
   clearInterval(searchInterval); searchInterval=null;
   callRetryCount=0;
@@ -735,7 +742,8 @@ async function handleIncomingCall(call){
   setStatus('matched — connecting','green');
   $('cancelBtn').style.display='none';
   call.answer(localStream);
-  listenForPartnerSignals();
+  // only call listenForPartnerSignals if not already listening
+  if(!signalRef) listenForPartnerSignals();
   handleCall(call);
 }
 
