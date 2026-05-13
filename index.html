@@ -116,6 +116,15 @@ body::before {
 #skipBtn:active  { transform: translateX(-50%) scale(.97); }
 #cancelBtn:active{ transform: translateX(-50%) scale(.97); }
 
+/* ── IMPOSTOR BUTTON ── */
+.impostor-btn {
+  background: #0a0a0a !important;
+  color: var(--red) !important;
+  border: 1px solid rgba(255,45,32,0.4) !important;
+  transition: background .2s, border-color .2s !important;
+}
+.impostor-btn:hover { background: rgba(255,45,32,0.08) !important; border-color: rgba(255,45,32,0.7) !important; }
+
 /* ── WAIT TIMER ── */
 #waitTimer {
   display: none;
@@ -415,8 +424,22 @@ body::before {
       </div>
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
-      <button id="startBtn" class="main-btn">START MATCHING</button>
-      <div id="waitTimer" style="margin-top:14px;">est. wait &nbsp;<span id="waitSecs">—</span></div>
+
+      <!-- MODE SELECT -->
+      <div id="modeSelect" style="display:flex;flex-direction:column;gap:12px;width:100%;">
+        <button id="startBtn" class="main-btn">START MATCHING</button>
+        <button class="main-btn impostor-btn" onclick="window.location.href='impostor.html'">
+          <span style="display:flex;align-items:center;justify-content:center;gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2L20 8L8 20L2 20L2 14L14 2Z" fill="#ff2d20" stroke="#ff2d20" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M2 20L5 17" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="18" cy="6" r="1.5" fill="#fff"/>
+            </svg>
+            IMPOSTOR
+          </span>
+        </button>
+      </div>
+      <div id="waitTimer" style="margin-top:14px;display:none;">est. wait &nbsp;<span id="waitSecs">—</span></div>
     </div>
   </div>
 </div>
