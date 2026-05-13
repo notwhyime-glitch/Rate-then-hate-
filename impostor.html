@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rathe | Impostor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #ff2d20; --green: #00ff87; --purple: #9333ea;
+  --bg: #050505; --panel: #0c0c0c; --border: #1a1a1a; --muted: #444;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body, html {
+  height: 100dvh; width: 100vw; background: var(--bg); color: #fff;
+  font-family: 'DM Mono', monospace; overflow: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 9000; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.035;
+}
+
+/* ── SCREENS ── */
+.screen { position: fixed; inset: 0; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 24px; z-index: 10; }
+.screen.active { display: flex; }
+
+/* ── SHARED ── */
+.logo-sm { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 6px; background: linear-gradient(135deg,#fff 0%,#888 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom: 4px; }
+.sub { font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 40px; }
+.btn { width: 100%; max-width: 340px; padding: 16px; border: none; border-radius: 12px; font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 3px; cursor: pointer; transition: transform .15s, opacity .2s; }
+.btn:active { transform: scale(.97); }
+.btn-white { background: #fff; color: #000; }
+.btn-red { background: var(--red); color: #fff; }
+.btn-dark { background: #111; color: #fff; border: 1px solid #2a2a2a; }
+.btn-ghost { background: transparent; color: #666; border: 1px solid #222; font-size: 1rem; }
+.gap { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; align-items: center; }
+
+/* ── MODE SELECT ── */
+#modeScreen { background: var(--panel); animation: bgShift 20s cubic-bezier(.45,0,.55,1) infinite alternate; }
+@keyframes bgShift { 0%{background:#080808} 100%{background:#2a2a2a} }
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 360px; margin-bottom: 20px; }
+.mode-card {
+  background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 14px;
+  padding: 20px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  cursor: pointer; transition: border-color .2s, background .2s;
+}
+.mode-card:hover { border-color: #333; background: #141414; }
+.mode-card.red:hover { border-color: rgba(255,45,32,0.5); }
+.mode-card-icon { font-size: 2rem; }
+.mode-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 3px; }
+.mode-card-sub { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; text-align: center; }
+
+/* ── LOBBY ── */
+#lobbyScreen { background: #070707; }
+.room-code-display {
+  background: #0d0d0d; border: 1px solid #222; border-radius: 12px;
+  padding: 16px 24px; font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem; letter-spacing: 8px; color: var(--green);
+  margin-bottom: 8px; text-align: center;
+}
+.room-code-hint { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 28px; }
+.player-list { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.player-slot {
+  background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 10px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  font-size: 11px; letter-spacing: 2px; color: #666; text-transform: uppercase;
+}
+.player-slot.filled { border-color: #2a2a2a; color: #aaa; }
+.player-slot.filled.me { border-color: rgba(0,255,135,0.3); color: var(--green); }
+.player-dot { width: 8px; height: 8px; border-radius: 50%; background: #222; flex-shrink: 0; }
+.player-dot.green { background: var(--green); box-shadow: 0 0 6px rgba(0,255,135,0.6); }
+.lobby-status { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; }
+.lobby-status.green { color: var(--green); }
+#lobbyCount { color: #fff; }
+
+/* ── JOIN SCREEN ── */
+#joinScreen { background: #070707; }
+.code-input {
+  width: 100%; max-width: 340px; background: #0d0d0d; border: 1px solid #2a2a2a;
+  border-radius: 12px; padding: 18px; font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem; letter-spacing: 8px; color: var(--green); text-align: center;
+  text-transform: uppercase; margin-bottom: 16px; outline: none;
+}
+.code-input:focus { border-color: #444; }
+
+/* ── GAME SCREEN ── */
+#gameScreen { background: #000; padding: 0; justify-content: flex-start; }
+.game-grid {
+  display: grid; width: 100vw; height: 100dvh;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+.game-grid.six { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
+.cam-slot {
+  position: relative; overflow: hidden; background: #060606;
+  border: 1px solid #111;
+}
+.cam-slot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-slot.local video { transform: scaleX(-1); }
+.cam-label {
+  position: absolute; bottom: 8px; left: 10px;
+  font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: #555; z-index: 5;
+}
+.cam-role {
+  position: absolute; top: 8px; left: 10px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 2px;
+  z-index: 5; opacity: 0; transition: opacity .3s;
+}
+.cam-role.show { opacity: 1; }
+.cam-role.impostor { color: var(--red); }
+.cam-role.witch { color: var(--purple); }
+.cam-role.villager { color: #aaa; }
+.cam-slot.dead { opacity: 0.2; }
+.cam-slot.dead::after {
+  content: 'DEAD'; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 4px;
+  color: var(--red); opacity: 0.6; z-index: 10;
+}
+/* kill overlay — impostor clicks this */
+.kill-overlay {
+  position: absolute; inset: 0; z-index: 20;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(255,45,32,0.12); cursor: pointer;
+  border: 2px solid rgba(255,45,32,0.4);
+  transition: background .15s;
+}
+.kill-overlay:hover { background: rgba(255,45,32,0.25); }
+.kill-overlay.visible { display: flex; }
+.kill-icon { font-size: 2.5rem; pointer-events: none; }
+
+/* ── HUD ── */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px); z-index: 100; border-bottom: 1px solid #111;
+}
+#hudPhase { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 3px; color: var(--red); }
+#hudTimer { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; color: #fff; }
+#hudRole { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+
+/* ── OVERLAYS ── */
+.full-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 500; padding: 32px; backdrop-filter: blur(12px);
+  text-align: center; gap: 16px;
+}
+.full-overlay.active { display: flex; }
+.overlay-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: 5px; }
+.overlay-sub { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+/* ── WITCH OVERLAY ── */
+#witchOverlay { z-index: 600; }
+.witch-choice { display: flex; gap: 12px; margin-top: 8px; width: 100%; max-width: 300px; }
+
+/* ── VOTING ── */
+#votingOverlay { z-index: 550; }
+.vote-grid { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 340px; margin-top: 8px; }
+.vote-btn {
+  background: #0d0d0d; border: 1px solid #222; border-radius: 10px;
+  padding: 14px 18px; font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; color: #aaa; cursor: pointer; text-align: left;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: border-color .15s, background .15s;
+}
+.vote-btn:hover { border-color: #444; background: #141414; }
+.vote-btn.selected { border-color: var(--red); color: #fff; background: rgba(255,45,32,0.08); }
+.vote-btn.skip { color: #555; }
+.vote-count { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--red); }
+#voteTimer { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--red); letter-spacing: 4px; }
+
+/* ── BLINDFOLD ── */
+#blindfold {
+  position: fixed; inset: 0; background: #000;
+  z-index: 200; display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+#blindfold.active { display: flex; }
+#blindfoldText { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 4px; color: #222; }
+
+/* ── END SCREEN ── */
+#endOverlay .overlay-title.win { color: var(--green); }
+#endOverlay .overlay-title.lose { color: var(--red); }
+
+/* ── TOAST ── */
+#itoast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 24px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #fff; z-index: 99999; transition: transform .3s cubic-bezier(.34,1.56,.64,1); pointer-events: none; }
+#itoast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── KILL TIMER BAR ── */
+#killBar { position: fixed; top: 56px; left: 0; right: 0; height: 3px; background: #111; z-index: 101; display: none; }
+#killFill { height: 100%; background: var(--red); transition: width 1s linear; }
+</style>
+</head>
+<body>
+
+<div id="itoast"></div>
+
+<!-- ── MODE SELECT ── -->
+<div class="screen active" id="modeScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub">choose your game</div>
+  <div class="mode-cards">
+    <div class="mode-card" onclick="showLobbyOptions('public')">
+      <div class="mode-card-icon">🌐</div>
+      <div class="mode-card-title">PUBLIC</div>
+      <div class="mode-card-sub">match with randoms</div>
+    </div>
+    <div class="mode-card red" onclick="showLobbyOptions('private')">
+      <div class="mode-card-icon">🔐</div>
+      <div class="mode-card-title">PRIVATE</div>
+      <div class="mode-card-sub">invite your friends</div>
+    </div>
+  </div>
+  <button class="btn btn-ghost" style="max-width:340px" onclick="window.location.href='index.html'">← BACK TO RATHE</button>
+</div>
+
+<!-- ── JOIN PRIVATE ── -->
+<div class="screen" id="joinScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub">enter room code</div>
+  <input class="code-input" id="codeInput" maxlength="6" placeholder="XXXXXX" oninput="this.value=this.value.toUpperCase()">
+  <div class="gap">
+    <button class="btn btn-white" onclick="joinPrivateRoom()">JOIN ROOM</button>
+    <button class="btn btn-ghost" onclick="showScreen('modeScreen')">BACK</button>
+  </div>
+</div>
+
+<!-- ── LOBBY ── -->
+<div class="screen" id="lobbyScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub" id="lobbyModeSub">waiting for players</div>
+  <div id="roomCodeSection" style="display:none; text-align:center; margin-bottom: 0;">
+    <div class="room-code-display" id="roomCodeDisplay">------</div>
+    <div class="room-code-hint">share this code with friends</div>
+  </div>
+  <div class="lobby-status"><span id="lobbyCount">1</span> / 4 players — need at least 4 to start</div>
+  <div class="player-list" id="playerList"></div>
+  <div class="gap">
+    <button class="btn btn-white" id="startGameBtn" style="opacity:0.3;pointer-events:none" onclick="hostStartGame()">START GAME</button>
+    <button class="btn btn-ghost" onclick="leaveLobby()">LEAVE</button>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div class="screen" id="gameScreen">
+  <div id="hud">
+    <div id="hudPhase">WAITING</div>
+    <div id="hudTimer">—</div>
+    <div id="hudRole">—</div>
+  </div>
+  <div id="killBar"><div id="killFill"></div></div>
+  <div class="game-grid" id="gameGrid"></div>
+</div>
+
+<!-- ── BLINDFOLD (kill phase for non-impostor) ── -->
+<div id="blindfold">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="#333" stroke-width="1.5" stroke-linecap="round"/></svg>
+  <div id="blindfoldText">EYES CLOSED</div>
+</div>
+
+<!-- ── WITCH DECISION ── -->
+<div class="full-overlay" id="witchOverlay">
+  <div class="overlay-title" style="color:var(--purple)">A KILL HAPPENED</div>
+  <div class="overlay-sub" id="witchSubtext">you have 15 seconds to decide</div>
+  <div id="witchTimerDisplay" style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--purple);letter-spacing:4px;">15</div>
+  <div class="witch-choice">
+    <button class="btn btn-dark" style="flex:1;border-color:var(--purple);color:var(--purple)" onclick="witchDecide('save')">SAVE</button>
+    <button class="btn btn-dark" style="flex:1" onclick="witchDecide('ignore')">LET DIE</button>
+  </div>
+  <div id="witchSavesLeft" style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:4px;"></div>
+</div>
+
+<!-- ── VOTING ── -->
+<div class="full-overlay" id="votingOverlay">
+  <div class="overlay-title" style="color:var(--red)">VOTE</div>
+  <div class="overlay-sub">who is the impostor?</div>
+  <div id="voteTimer">60</div>
+  <div class="vote-grid" id="voteGrid"></div>
+</div>
+
+<!-- ── ELIMINATION RESULT ── -->
+<div class="full-overlay" id="elimOverlay">
+  <div class="overlay-title" id="elimTitle" style="color:var(--red)">ELIMINATED</div>
+  <div class="overlay-sub" id="elimSub"></div>
+</div>
+
+<!-- ── END SCREEN ── -->
+<div class="full-overlay" id="endOverlay">
+  <div class="overlay-title" id="endTitle">GAME OVER</div>
+  <div class="overlay-sub" id="endSub"></div>
+  <button class="btn btn-white" style="margin-top:24px;max-width:280px" onclick="window.location.href='impostor.html'">PLAY AGAIN</button>
+  <button class="btn btn-ghost" style="max-width:280px" onclick="window.location.href='index.html'">BACK TO RATHE</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+/* ── FIREBASE ── */
+firebase.initializeApp({
+  apiKey:            "AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
+  authDomain:        "rate-then-hate-backend.firebaseapp.com",
+  databaseURL:       "https://rate-then-hate-backend-default-rtdb.firebaseio.com",
+  projectId:         "rate-then-hate-backend",
+  storageBucket:     "rate-then-hate-backend.firebasestorage.app",
+  messagingSenderId: "195653571803",
+  appId:             "1:195653571803:web:6482704037cb0f2835e8fe"
+});
+const db = firebase.database();
+
+/* ── PEER ── */
+function createPeer(){
+  return new Peer(undefined,{
+    host:'my-peer-server-mjl5.onrender.com',port:443,path:'/peerjs',secure:true,debug:1,
+    config:{iceServers:[
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun1.l.google.com:19302'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+    ]}
+  });
+}
+
+/* ── STATE ── */
+let peer = null, myId = null;
+let gameId = null, myRole = null, isHost = false;
+let localStream = null;
+let connections = {}; // peerId -> DataConnection + MediaConnection
+let players = {};     // peerId -> { name, alive, role(host-only) }
+let gamePhase = 'waiting';
+let killTarget = null;
+let witchSaves = 1;
+let myVote = null;
+let voteTimerInterval = null, killTimerInterval = null;
+let pendingKill = null;
+
+const $ = id => document.getElementById(id);
+function showToast(msg, dur=3000){
+  const t=$('itoast'); t.innerText=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+/* ── PEER INIT ── */
+function initPeer(cb){
+  peer = createPeer();
+  peer.on('open', id=>{ myId=id; if(cb) cb(); });
+  peer.on('error', err=>{ console.error('peer error',err); showToast('connection error'); });
+  peer.on('call', handleIncomingMediaCall);
+  peer.on('connection', handleIncomingDataConn);
+}
+
+/* ── LOBBY OPTIONS ── */
+function showLobbyOptions(type){
+  if(type==='public'){
+    initPeer(()=>joinPublicLobby());
+  } else {
+    // show join or create options
+    const choice = confirm('Create a new private room?\n\nOK = Create\nCancel = Join with code');
+    if(choice){
+      initPeer(()=>createPrivateRoom());
+    } else {
+      showScreen('joinScreen');
+    }
+  }
+}
+
+function generateCode(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+/* ── PUBLIC LOBBY ── */
+async function joinPublicLobby(){
+  showScreen('lobbyScreen');
+  $('roomCodeSection').style.display='none';
+  $('lobbyModeSub').innerText='public match — waiting for players';
+
+  // find an open public game or create one
+  const snap = await db.ref('impostor_public').once('value');
+  const games = snap.val();
+  let foundGame = null;
+
+  if(games){
+    for(let gid of Object.keys(games)){
+      const g = games[gid];
+      if(g.status==='waiting' && Object.keys(g.players||{}).length < 8){
+        foundGame = gid; break;
+      }
+    }
+  }
+
+  if(foundGame){
+    gameId = foundGame;
+    isHost = false;
+  } else {
+    gameId = 'pub_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    isHost = true;
+    await db.ref(`impostor_public/${gameId}`).set({ status:'waiting', host:myId, ts:Date.now() });
+  }
+
+  joinLobbyRoom();
+}
+
+/* ── PRIVATE ROOM ── */
+async function createPrivateRoom(){
+  const code = generateCode();
+  gameId = 'prv_' + code;
+  isHost = true;
+  showScreen('lobbyScreen');
+  $('roomCodeSection').style.display='block';
+  $('roomCodeDisplay').innerText = code;
+  $('lobbyModeSub').innerText = 'private room';
+  await db.ref(`impostor_private/${gameId}`).set({ status:'waiting', host:myId, ts:Date.now() });
+  joinLobbyRoom();
+}
+
+function joinPrivateRoom(){
+  const code = $('codeInput').value.trim().toUpperCase();
+  if(code.length !== 6){ showToast('enter a 6-digit code'); return; }
+  gameId = 'prv_' + code;
+  isHost = false;
+  initPeer(()=>{
+    showScreen('lobbyScreen');
+    $('roomCodeSection').style.display='block';
+    $('roomCodeDisplay').innerText = code;
+    $('lobbyModeSub').innerText = 'private room';
+    joinLobbyRoom();
+  });
+}
+
+/* ── JOIN LOBBY ROOM ── */
+function joinLobbyRoom(){
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  const playersRef = db.ref(`${lobbyType}/${gameId}/players`);
+
+  // write myself
+  playersRef.child(myId).set({ peerId: myId, joinedAt: Date.now() });
+  playersRef.child(myId).onDisconnect().remove();
+
+  // listen for player changes
+  playersRef.on('value', snap=>{
+    players = {};
+    const val = snap.val();
+    if(val) Object.entries(val).forEach(([pid, p])=>{ players[pid] = p; });
+    renderLobbyPlayers();
+    checkLobbyReady();
+  });
+
+  // listen for game start signal
+  const gameRef = gameId.startsWith('pub_') ?
+    db.ref(`impostor_public/${gameId}`) : db.ref(`impostor_private/${gameId}`);
+  gameRef.child('status').on('value', snap=>{
+    if(snap.val()==='started') loadGame();
+  });
+}
+
+function renderLobbyPlayers(){
+  const list = $('playerList');
+  list.innerHTML = '';
+  const pids = Object.keys(players);
+  const max = 8;
+  for(let i=0;i<Math.max(4,pids.length+1,max);i++){
+    const slot = document.createElement('div');
+    slot.className = 'player-slot';
+    if(i < pids.length){
+      slot.classList.add('filled');
+      if(pids[i]===myId) slot.classList.add('me');
+      slot.innerHTML = `<div class="player-dot green"></div>${pids[i]===myId?'you':'player '+(i+1)}`;
+    } else {
+      slot.innerHTML = `<div class="player-dot"></div>waiting...`;
+    }
+    list.appendChild(slot);
+    if(i>=7) break;
+  }
+  $('lobbyCount').innerText = pids.length;
+  $('lobbyCount').parentElement.innerText = `${pids.length} / 4+ players — need at least 4 to start`;
+}
+
+function checkLobbyReady(){
+  const count = Object.keys(players).length;
+  const btn = $('startGameBtn');
+  if(isHost && count >= 4){
+    btn.style.opacity='1'; btn.style.pointerEvents='all';
+  } else {
+    btn.style.opacity='0.3'; btn.style.pointerEvents='none';
+  }
+}
+
+/* ── HOST STARTS GAME ── */
+async function hostStartGame(){
+  if(!isHost) return;
+  const pids = Object.keys(players);
+  if(pids.length < 4){ showToast('need at least 4 players'); return; }
+
+  // assign roles
+  const shuffled = [...pids].sort(()=>Math.random()-.5);
+  const roles = {};
+  roles[shuffled[0]] = 'impostor';
+  roles[shuffled[1]] = 'witch';
+  shuffled.slice(2).forEach(pid=>{ roles[pid]='villager'; });
+
+  const witchSaveCount = pids.length >= 6 ? 2 : 1;
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+
+  await db.ref(`${lobbyType}/${gameId}`).update({
+    status: 'started',
+    roles,
+    witchSaves: witchSaveCount,
+    phase: 'kill',
+    killTimer: Date.now() + 20000,
+    alive: Object.fromEntries(pids.map(p=>[p,true]))
+  });
+}
+
+/* ── LOAD GAME ── */
+async function loadGame(){
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  const snap = await db.ref(`${lobbyType}/${gameId}`).once('value');
+  const data = snap.val();
+
+  myRole = data.roles[myId];
+  witchSaves = data.witchSaves;
+  const pids = Object.keys(data.roles);
+
+  showScreen('gameScreen');
+  buildGameGrid(pids, data.roles);
+  setupHUD();
+
+  // get local stream
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({audio:true, video:true});
+    const mySlot = document.querySelector(`.cam-slot[data-pid="${myId}"] video`);
+    if(mySlot) mySlot.srcObject = localStream;
+  }catch(e){ showToast('camera/mic needed'); }
+
+  // mesh connect to everyone
+  connectMesh(pids);
+
+  // listen to game state
+  listenGameState(lobbyType);
+}
+
+/* ── BUILD GRID ── */
+function buildGameGrid(pids, roles){
+  const grid = $('gameGrid');
+  grid.innerHTML = '';
+  if(pids.length >= 5) grid.classList.add('six');
+
+  pids.forEach(pid=>{
+    const slot = document.createElement('div');
+    slot.className = 'cam-slot' + (pid===myId?' local':'');
+    slot.dataset.pid = pid;
+
+    const vid = document.createElement('video');
+    vid.autoplay = true; vid.playsinline = true;
+    if(pid===myId) vid.muted = true;
+    slot.appendChild(vid);
+
+    const label = document.createElement('div');
+    label.className = 'cam-label';
+    label.innerText = pid===myId ? 'you' : 'player';
+    slot.appendChild(label);
+
+    const roleLabel = document.createElement('div');
+    roleLabel.className = 'cam-role';
+    // only show your own role to yourself
+    if(pid===myId){
+      roleLabel.classList.add('show', myRole);
+      roleLabel.innerText = myRole.toUpperCase();
+    }
+    slot.appendChild(roleLabel);
+
+    // kill overlay — only impostor sees these on OTHER players
+    if(myRole==='impostor' && pid!==myId){
+      const overlay = document.createElement('div');
+      overlay.className = 'kill-overlay';
+      overlay.dataset.target = pid;
+      overlay.innerHTML = '<div class="kill-icon">🔪</div>';
+      overlay.onclick = ()=>selectKillTarget(pid);
+      slot.appendChild(overlay);
+    }
+
+    grid.appendChild(slot);
+  });
+}
+
+/* ── MESH CONNECTIONS ── */
+function connectMesh(pids){
+  pids.forEach(pid=>{
+    if(pid===myId) return;
+    if(pid > myId){
+      // I call them
+      setTimeout(()=>{
+        if(!localStream) return;
+        const call = peer.call(pid, localStream);
+        connections[pid] = connections[pid] || {};
+        connections[pid].call = call;
+        call.on('stream', stream=>{
+          attachRemoteStream(pid, stream);
+        });
+        call.on('error', e=>console.warn('call error',pid,e));
+      }, 800);
+    }
+    // lower id waits for incoming call (handled in handleIncomingMediaCall)
+  });
+}
+
+function handleIncomingMediaCall(call){
+  if(!localStream) return;
+  call.answer(localStream);
+  const pid = call.peer;
+  connections[pid] = connections[pid] || {};
+  connections[pid].call = call;
+  call.on('stream', stream=>{
+    attachRemoteStream(pid, stream);
+  });
+}
+
+function handleIncomingDataConn(conn){
+  conn.on('data', data=>{ handlePeerData(conn.peer, data); });
+}
+
+function attachRemoteStream(pid, stream){
+  const slot = document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+  if(!slot) return;
+  const vid = slot.querySelector('video');
+  if(vid) vid.srcObject = stream;
+}
+
+/* ── GAME STATE LISTENER ── */
+function listenGameState(lobbyType){
+  db.ref(`${lobbyType}/${gameId}`).on('value', snap=>{
+    const data = snap.val();
+    if(!data) return;
+    handlePhaseChange(data);
+  });
+}
+
+function handlePhaseChange(data){
+  const newPhase = data.phase;
+  if(newPhase === gamePhase && newPhase !== 'voting') return;
+  gamePhase = newPhase;
+
+  if(newPhase === 'kill') startKillPhase(data);
+  if(newPhase === 'witch') startWitchPhase(data);
+  if(newPhase === 'voting') startVotingPhase(data);
+  if(newPhase === 'ended') showEndScreen(data);
+
+  // update alive status
+  if(data.alive){
+    Object.entries(data.alive).forEach(([pid, alive])=>{
+      const slot = document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+      if(slot){
+        if(!alive) slot.classList.add('dead');
+        else slot.classList.remove('dead');
+      }
+    });
+  }
+}
+
+/* ── KILL PHASE ── */
+function startKillPhase(data){
+  $('votingOverlay').classList.remove('active');
+  $('witchOverlay').classList.remove('active');
+  $('elimOverlay').classList.remove('active');
+
+  if(myRole==='impostor'){
+    // show all cameras, show kill overlays
+    $('blindfold').classList.remove('active');
+    $('hudPhase').innerText = 'KILL PHASE';
+    $('hudRole').innerText = 'YOU ARE THE IMPOSTOR';
+    document.querySelectorAll('.kill-overlay').forEach(o=>{
+      const tpid = o.dataset.target;
+      const alive = data.alive && data.alive[tpid];
+      if(alive) o.classList.add('visible');
+    });
+    startKillTimer(20);
+  } else {
+    // blindfolded
+    $('blindfold').classList.add('active');
+    $('blindfoldText').innerText = myRole==='witch' ? 'WAITING...' : 'EYES CLOSED';
+    updateHudForRole();
+  }
+
+  $('killBar').style.display='block';
+  $('killFill').style.width='100%';
+  setTimeout(()=>{ $('killFill').style.width='0%'; }, 50);
+}
+
+function startKillTimer(secs){
+  clearInterval(killTimerInterval);
+  let t = secs;
+  $('hudTimer').innerText = t+'s';
+  killTimerInterval = setInterval(()=>{
+    t--;
+    $('hudTimer').innerText = t+'s';
+    if(t<=0){
+      clearInterval(killTimerInterval);
+      // if impostor didn't kill, skip to voting
+      if(isHost && !killTarget){
+        advanceToVoting();
+      }
+    }
+  },1000);
+}
+
+function selectKillTarget(pid){
+  if(myRole!=='impostor') return;
+  if(gamePhase!=='kill') return;
+  killTarget = pid;
+  clearInterval(killTimerInterval);
+  document.querySelectorAll('.kill-overlay').forEach(o=>o.classList.remove('visible'));
+  $('killBar').style.display='none';
+  $('hudTimer').innerText='—';
+
+  // write kill to firebase
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  db.ref(`${lobbyType}/${gameId}`).update({
+    phase:'witch',
+    killTarget: pid,
+    witchTimer: Date.now()+15000
+  });
+}
+
+/* ── WITCH PHASE ── */
+function startWitchPhase(data){
+  $('blindfold').classList.remove('active');
+  clearInterval(killTimerInterval);
+  $('killBar').style.display='none';
+  pendingKill = data.killTarget;
+
+  if(myRole==='witch' && data.alive && data.alive[myId]){
+    // show witch decision overlay
+    $('witchOverlay').classList.add('active');
+    $('witchSubtext').innerText = `player was killed — save them?`;
+    $('witchSavesLeft').innerText = `saves remaining: ${witchSaves}`;
+    let t=15;
+    $('witchTimerDisplay').innerText=t;
+    const wt=setInterval(()=>{
+      t--;
+      $('witchTimerDisplay').innerText=t;
+      if(t<=0){ clearInterval(wt); witchDecide('ignore'); }
+    },1000);
+    $('witchOverlay').dataset.timer=wt;
+  } else {
+    // everyone else waits
+    $('blindfold').classList.add('active');
+    $('blindfoldText').innerText='WAITING...';
+  }
+}
+
+function witchDecide(decision){
+  clearInterval(parseInt($('witchOverlay').dataset.timer));
+  $('witchOverlay').classList.remove('active');
+  $('blindfold').classList.remove('active');
+
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+
+  if(decision==='save' && witchSaves>0){
+    witchSaves--;
+    // save — don't kill, go straight to voting
+    db.ref(`${lobbyType}/${gameId}`).update({
+      phase:'voting',
+      witchSaved: pendingKill,
+      killTarget: null,
+      voteTimer: Date.now()+60000,
+      votes:{}
+    });
+  } else {
+    // let die — mark dead, go to voting
+    const updates = {};
+    updates[`alive/${pendingKill}`] = false;
+    updates['phase'] = 'voting';
+    updates['voteTimer'] = Date.now()+60000;
+    updates['votes'] = {};
+    db.ref(`${lobbyType}/${gameId}`).update(updates).then(()=>{
+      checkWinCondition();
+    });
+  }
+}
+
+/* ── VOTING PHASE ── */
+function startVotingPhase(data){
+  $('blindfold').classList.remove('active');
+  $('witchOverlay').classList.remove('active');
+
+  // re-enable all tracks
+  if(localStream) localStream.getTracks().forEach(t=>t.enabled=true);
+
+  $('hudPhase').innerText='VOTING';
+  updateHudForRole();
+
+  const alive = data.alive || {};
+  const alivePids = Object.keys(alive).filter(p=>alive[p]);
+
+  const grid = $('voteGrid');
+  grid.innerHTML='';
+  myVote=null;
+
+  alivePids.forEach(pid=>{
+    if(pid===myId) return; // can't vote yourself
+    const btn=document.createElement('button');
+    btn.className='vote-btn';
+    btn.dataset.pid=pid;
+    btn.innerHTML=`<span>${pid===myId?'you':'player '+pid.slice(0,6)}</span><span class="vote-count" id="vc_${pid}">0</span>`;
+    btn.onclick=()=>castVote(pid, data);
+    grid.appendChild(btn);
+  });
+
+  // skip option
+  const skip=document.createElement('button');
+  skip.className='vote-btn skip';
+  skip.dataset.pid='skip';
+  skip.innerHTML='<span>skip vote</span><span class="vote-count" id="vc_skip">0</span>';
+  skip.onclick=()=>castVote('skip', data);
+  grid.appendChild(skip);
+
+  $('votingOverlay').classList.add('active');
+
+  // vote timer
+  let t=60;
+  $('voteTimer').innerText=t;
+  clearInterval(voteTimerInterval);
+  voteTimerInterval=setInterval(()=>{
+    t--;
+    $('voteTimer').innerText=t;
+    if(t<=0){ clearInterval(voteTimerInterval); if(!myVote) castVote('skip',data); }
+  },1000);
+
+  // listen for vote updates
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  db.ref(`${lobbyType}/${gameId}/votes`).on('value',snap=>{
+    const votes=snap.val()||{};
+    updateVoteCounts(votes, alivePids);
+  });
+}
+
+function castVote(targetPid, data){
+  if(myVote) return;
+  myVote=targetPid;
+  // highlight selected
+  document.querySelectorAll('.vote-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.pid===targetPid);
+  });
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  db.ref(`${lobbyType}/${gameId}/votes/${myId}`).set(targetPid);
+}
+
+function updateVoteCounts(votes, alivePids){
+  const counts={};
+  Object.values(votes).forEach(v=>{ counts[v]=(counts[v]||0)+1; });
+  Object.entries(counts).forEach(([pid,c])=>{
+    const el=$('vc_'+pid);
+    if(el) el.innerText=c;
+  });
+
+  // check if all alive players voted
+  const totalAlive = alivePids.length;
+  const totalVotes = Object.keys(votes).length;
+  if(totalVotes>=totalAlive && isHost){
+    clearInterval(voteTimerInterval);
+    resolveVotes(votes, alivePids);
+  }
+}
+
+function resolveVotes(votes, alivePids){
+  const counts={};
+  Object.values(votes).forEach(v=>{ counts[v]=(counts[v]||0)+1; });
+  let maxVotes=0, eliminated=null;
+  Object.entries(counts).forEach(([pid,c])=>{
+    if(c>maxVotes){ maxVotes=c; eliminated=pid; }
+  });
+
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+
+  if(!eliminated||eliminated==='skip'||maxVotes<=1){
+    // skip — no elimination
+    db.ref(`${lobbyType}/${gameId}`).update({
+      phase:'kill', eliminated:null, killTarget:null, voteTimer:null,
+      killTimer:Date.now()+20000
+    });
+  } else {
+    // eliminate player
+    const updates={};
+    updates[`alive/${eliminated}`]=false;
+    updates['eliminated']=eliminated;
+    updates['phase']='elim';
+    db.ref(`${lobbyType}/${gameId}`).update(updates).then(()=>{
+      setTimeout(()=>{
+        checkWinConditionAndAdvance(eliminated);
+      },3000);
+    });
+  }
+}
+
+function checkWinConditionAndAdvance(eliminated){
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  db.ref(`${lobbyType}/${gameId}`).once('value').then(snap=>{
+    const data=snap.val();
+    const alive=data.alive||{};
+    const alivePids=Object.keys(alive).filter(p=>alive[p]);
+    const roles=data.roles||{};
+    const impostorPid=Object.keys(roles).find(p=>roles[p]==='impostor');
+    const impostorAlive=alive[impostorPid];
+
+    if(!impostorAlive){
+      db.ref(`${lobbyType}/${gameId}`).update({phase:'ended',winner:'villagers'});
+      return;
+    }
+    const nonImpostor=alivePids.filter(p=>p!==impostorPid);
+    if(nonImpostor.length<=1){
+      db.ref(`${lobbyType}/${gameId}`).update({phase:'ended',winner:'impostor'});
+      return;
+    }
+    // continue
+    db.ref(`${lobbyType}/${gameId}`).update({
+      phase:'kill', eliminated:null, killTarget:null,
+      killTimer:Date.now()+20000, votes:{}
+    });
+  });
+}
+
+function checkWinCondition(){
+  if(!isHost) return;
+  checkWinConditionAndAdvance(null);
+}
+
+function advanceToVoting(){
+  if(!isHost) return;
+  const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+  db.ref(`${lobbyType}/${gameId}`).update({
+    phase:'witch', killTarget:null, witchTimer:Date.now()+1000
+  });
+}
+
+/* ── END SCREEN ── */
+function showEndScreen(data){
+  $('votingOverlay').classList.remove('active');
+  $('witchOverlay').classList.remove('active');
+  $('blindfold').classList.remove('active');
+  clearInterval(voteTimerInterval);
+  clearInterval(killTimerInterval);
+
+  const winner = data.winner;
+  const title = $('endTitle');
+  const sub = $('endSub');
+
+  if(winner==='villagers'){
+    if(myRole==='impostor'){
+      title.className='overlay-title lose'; title.innerText='YOU LOST';
+      sub.innerText='the village found you out';
+    } else {
+      title.className='overlay-title win'; title.innerText='YOU WON';
+      sub.innerText='the impostor was eliminated';
+    }
+  } else {
+    if(myRole==='impostor'){
+      title.className='overlay-title win'; title.innerText='YOU WON';
+      sub.innerText='you eliminated the village';
+    } else {
+      title.className='overlay-title lose'; title.innerText='YOU LOST';
+      sub.innerText='the impostor won';
+    }
+  }
+  $('endOverlay').classList.add('active');
+}
+
+/* ── HUD ── */
+function setupHUD(){
+  updateHudForRole();
+}
+function updateHudForRole(){
+  const labels={'impostor':'IMPOSTOR','witch':'WITCH','villager':'VILLAGER'};
+  $('hudRole').innerText = labels[myRole]||'—';
+  $('hudRole').style.color = myRole==='impostor'?'var(--red)':myRole==='witch'?'var(--purple)':'#aaa';
+}
+
+/* ── LEAVE LOBBY ── */
+function leaveLobby(){
+  if(gameId){
+    const lobbyType = gameId.startsWith('pub_') ? 'impostor_public' : 'impostor_private';
+    if(myId) db.ref(`${lobbyType}/${gameId}/players/${myId}`).remove();
+  }
+  if(peer) try{ peer.destroy(); }catch(e){}
+  window.location.href='index.html';
+}
+</script>
+</body>
+</html>
