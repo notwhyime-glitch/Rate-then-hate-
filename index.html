@@ -438,6 +438,9 @@ body::before {
             IMPOSTOR
           </span>
         </button>
+        <button class="main-btn" onclick="window.location.href='guess.html'" style="margin-top:0;background:#0a0a0a;color:#ffd60a;border:1px solid rgba(255,214,10,0.4);">
+          🎭 &nbsp;GUESS THE PERSON
+        </button>
       </div>
       <div id="waitTimer" style="margin-top:14px;display:none;">est. wait &nbsp;<span id="waitSecs">—</span></div>
     </div>
@@ -728,6 +731,8 @@ $('startBtn').onclick = async () => {
   // hide impostor button while searching
   const impBtn = document.querySelector('.main-btn.impostor-btn') || [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
   if(impBtn) impBtn.style.display='none';
+  const guessBtn2 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
+  if(guessBtn2) guessBtn2.style.display='none';
   setStatus('scanning the void','green');
   $('cancelBtn').style.display='block';
   startWaitTimer();
@@ -1092,6 +1097,8 @@ $('cancelBtn').onclick = ()=>{
   $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
   const impBtn2 = document.querySelector('.main-btn.impostor-btn') || [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
   if(impBtn2) impBtn2.style.display='';
+  const gBtn2 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
+  if(gBtn2) gBtn2.style.display='';
   setReportBtn(false);
   setStatus('ready when you are','');
 };
@@ -1109,6 +1116,8 @@ function reset(){
   $('startBtn').innerHTML='START MATCHING';
   const impBtn3 = document.querySelector('.main-btn.impostor-btn') || [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
   if(impBtn3) impBtn3.style.display='';
+  const gBtn3 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
+  if(gBtn3) gBtn3.style.display='';
   $('timer').style.display='none'; $('timer').innerText='02:00';
   $('skipBtn').style.display='none'; $('cancelBtn').style.display='none';
   $('rating-screen').style.display='none'; $('reveal').style.display='none';
