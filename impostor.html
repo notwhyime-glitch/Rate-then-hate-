@@ -203,19 +203,17 @@ body::before {
 <div class="screen active" id="modeScreen">
   <div class="logo-sm">RATHE</div>
   <div class="sub">choose your game</div>
-  <div class="mode-cards">
-    <div class="mode-card" onclick="showLobbyOptions('public')">
-      <div class="mode-card-icon">🌐</div>
-      <div class="mode-card-title">PUBLIC</div>
-      <div class="mode-card-sub">match with randoms</div>
-    </div>
-    <div class="mode-card red" onclick="showLobbyOptions('private')">
-      <div class="mode-card-icon">🔐</div>
-      <div class="mode-card-title">PRIVATE</div>
-      <div class="mode-card-sub">invite your friends</div>
-    </div>
+  <div class="gap">
+    <button class="btn btn-white" onclick="startPublic()">🌐 &nbsp;PUBLIC MATCH</button>
+    <button class="btn btn-dark" style="border-color:rgba(255,45,32,0.4);color:var(--red)" onclick="startCreatePrivate()">🔐 &nbsp;CREATE PRIVATE ROOM</button>
+    <button class="btn btn-dark" onclick="showScreen('joinScreen')">🔑 &nbsp;JOIN WITH CODE</button>
+    <button class="btn btn-ghost" onclick="window.location.href='index.html'">← BACK TO RATHE</button>
   </div>
-  <button class="btn btn-ghost" style="max-width:340px" onclick="window.location.href='index.html'">← BACK TO RATHE</button>
+  <div id="publicStatus" style="display:none;margin-top:20px;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:center;">
+    <div style="color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:4px;" id="publicStatusText">CONNECTING...</div>
+    <div style="margin-top:6px;" id="publicWaitText">—</div>
+    <button class="btn btn-ghost" style="margin-top:16px;max-width:200px;font-size:0.9rem" onclick="cancelPublic()">CANCEL</button>
+  </div>
 </div>
 
 <!-- ── JOIN PRIVATE ── -->
@@ -351,26 +349,52 @@ function showScreen(id){
 
 /* ── PEER INIT ── */
 function initPeer(cb){
+  // if peer already healthy reuse it
+  if(peer && !peer.destroyed && myId){ if(cb) cb(); return; }
+  if(peer){ try{ peer.destroy(); }catch(e){} peer=null; myId=null; }
   peer = createPeer();
-  peer.on('open', id=>{ myId=id; if(cb) cb(); });
-  peer.on('error', err=>{ console.error('peer error',err); showToast('connection error'); });
+  peer.on('open', id=>{
+    myId=id;
+    console.log('[impostor] peer ready:', id);
+    if(cb) cb();
+  });
+  peer.on('error', err=>{
+    console.error('[impostor] peer error', err);
+    if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'||err.type==='socket-closed'){
+      showToast('connection error — retrying...');
+      setTimeout(()=>initPeer(cb), 2000);
+    } else {
+      showToast('connection error: '+err.type);
+    }
+  });
   peer.on('call', handleIncomingMediaCall);
   peer.on('connection', handleIncomingDataConn);
 }
 
 /* ── LOBBY OPTIONS ── */
-function showLobbyOptions(type){
-  if(type==='public'){
-    initPeer(()=>joinPublicLobby());
-  } else {
-    // show join or create options
-    const choice = confirm('Create a new private room?\n\nOK = Create\nCancel = Join with code');
-    if(choice){
-      initPeer(()=>createPrivateRoom());
-    } else {
-      showScreen('joinScreen');
-    }
-  }
+let publicSearchInterval = null;
+
+function startPublic(){
+  // show searching UI inline on mode screen
+  document.querySelector('.gap').style.display='none';
+  $('publicStatus').style.display='block';
+  $('publicStatusText').innerText='CONNECTING...';
+  $('publicWaitText').innerText='getting your peer id...';
+  initPeer(()=>{
+    $('publicStatusText').innerText='SEARCHING...';
+    joinPublicLobby();
+  });
+}
+
+function cancelPublic(){
+  if(publicSearchInterval){ clearInterval(publicSearchInterval); publicSearchInterval=null; }
+  if(peer){ try{ peer.destroy(); }catch(e){} peer=null; }
+  document.querySelector('.gap').style.display='flex';
+  $('publicStatus').style.display='none';
+}
+
+function startCreatePrivate(){
+  initPeer(()=>createPrivateRoom());
 }
 
 function generateCode(){
@@ -379,10 +403,6 @@ function generateCode(){
 
 /* ── PUBLIC LOBBY ── */
 async function joinPublicLobby(){
-  showScreen('lobbyScreen');
-  $('roomCodeSection').style.display='none';
-  $('lobbyModeSub').innerText='public match — waiting for players';
-
   // find an open public game or create one
   const snap = await db.ref('impostor_public').once('value');
   const games = snap.val();
@@ -391,7 +411,8 @@ async function joinPublicLobby(){
   if(games){
     for(let gid of Object.keys(games)){
       const g = games[gid];
-      if(g.status==='waiting' && Object.keys(g.players||{}).length < 8){
+      const playerCount = Object.keys(g.players||{}).length;
+      if(g.status==='waiting' && playerCount >= 1 && playerCount < 8){
         foundGame = gid; break;
       }
     }
@@ -400,13 +421,57 @@ async function joinPublicLobby(){
   if(foundGame){
     gameId = foundGame;
     isHost = false;
+    $('publicStatusText').innerText='GAME FOUND!';
+    $('publicWaitText').innerText='joining lobby...';
+    setTimeout(()=>{
+      showScreen('lobbyScreen');
+      $('roomCodeSection').style.display='none';
+      $('lobbyModeSub').innerText='public match — waiting for players';
+      joinLobbyRoom();
+    }, 800);
   } else {
+    // no game found — create one and wait for others
     gameId = 'pub_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
     isHost = true;
     await db.ref(`impostor_public/${gameId}`).set({ status:'waiting', host:myId, ts:Date.now() });
-  }
 
-  joinLobbyRoom();
+    // show wait estimate while polling for players
+    let waitSecs = 0;
+    publicSearchInterval = setInterval(async ()=>{
+      waitSecs++;
+      // check if enough players joined
+      const pSnap = await db.ref(`impostor_public/${gameId}/players`).once('value');
+      const count = pSnap.numChildren();
+      if(count >= 4){
+        clearInterval(publicSearchInterval);
+        showScreen('lobbyScreen');
+        $('roomCodeSection').style.display='none';
+        $('lobbyModeSub').innerText='public match — waiting for players';
+        joinLobbyRoom();
+        return;
+      }
+      // update wait estimate
+      const onlineSnap = await db.ref('online').once('value');
+      const online = onlineSnap.numChildren() || 1;
+      $('publicStatusText').innerText = `${count} / 4 PLAYERS`;
+      if(online <= 1){
+        $('publicWaitText').innerText = 'waiting for others to join...';
+      } else {
+        const est = Math.max(5, Math.round(30 / online));
+        $('publicWaitText').innerText = est <= 10 ? 'est. wait: under 10s' :
+                                         est <= 30 ? 'est. wait: under 30s' : 'est. wait: a few minutes';
+      }
+    }, 2000);
+
+    // also go to lobby now so host can see it filling up
+    setTimeout(()=>{
+      clearInterval(publicSearchInterval);
+      showScreen('lobbyScreen');
+      $('roomCodeSection').style.display='none';
+      $('lobbyModeSub').innerText='public match — waiting for players';
+      joinLobbyRoom();
+    }, 1500);
+  }
 }
 
 /* ── PRIVATE ROOM ── */
@@ -414,12 +479,17 @@ async function createPrivateRoom(){
   const code = generateCode();
   gameId = 'prv_' + code;
   isHost = true;
-  showScreen('lobbyScreen');
-  $('roomCodeSection').style.display='block';
-  $('roomCodeDisplay').innerText = code;
-  $('lobbyModeSub').innerText = 'private room';
-  await db.ref(`impostor_private/${gameId}`).set({ status:'waiting', host:myId, ts:Date.now() });
-  joinLobbyRoom();
+  try{
+    await db.ref(`impostor_private/${gameId}`).set({ status:'waiting', host:myId, ts:Date.now() });
+    showScreen('lobbyScreen');
+    $('roomCodeSection').style.display='block';
+    $('roomCodeDisplay').innerText = code;
+    $('lobbyModeSub').innerText = 'private room';
+    joinLobbyRoom();
+  }catch(e){
+    console.error('createPrivateRoom error',e);
+    showToast('failed to create room — check connection');
+  }
 }
 
 function joinPrivateRoom(){
