@@ -54,8 +54,9 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 .cams-area.two{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}
 .cams-area.three{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
 
-.cam-slot{position:relative;overflow:hidden;background:#060606;border:1px solid #111;}
-.cam-slot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.cam-slot{position:relative;overflow:hidden;background:#060606;border:2px solid var(--green);box-shadow:0 0 12px rgba(0,255,135,0.4),0 0 32px rgba(0,255,135,0.1),inset 0 0 12px rgba(0,255,135,0.04);}
+.cam-slot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s ease;}
+.cam-slot video.live{opacity:1;}
 .cam-slot.local video{transform:scaleX(-1);}
 
 /* PLAYER NUMBER BADGE */
@@ -65,15 +66,26 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 /* CHARACTER CARD — visible to others, hidden from self */
 .char-card{
   position:absolute;bottom:0;left:0;right:0;
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(to top,rgba(0,0,0,.9),transparent);
-  padding:8px 10px 10px;z-index:10;
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(to top,rgba(0,0,0,.95) 60%,transparent);
+  padding:12px 12px 14px;z-index:10;
 }
-.char-card.hidden-self{filter:blur(40px);pointer-events:none;user-select:none;}
-.char-img{width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid #333;}
-.char-img.fallback{background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;}
-.char-name{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:#fff;}
-.char-cat{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.char-card.hidden-self{filter:blur(30px);pointer-events:none;user-select:none;}
+.char-img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid #333;}
+.char-name{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:#fff;}
+.char-cat{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+
+/* MY CHAR PANEL — shows above chat box, blurred for self */
+#myCharPanel{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-bottom:1px solid #1a1a1a;
+  background:#0a0a0a;flex-shrink:0;
+}
+#myCharPanel .panel-img{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid #222;flex-shrink:0;}
+#myCharPanel .panel-info{display:flex;flex-direction:column;gap:2px;}
+#myCharPanel .panel-label{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+#myCharPanel .panel-name{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--green);filter:blur(6px);user-select:none;}
+#myCharPanel .panel-cat{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;filter:blur(6px);}
 
 /* GUESSED OVERLAY */
 .cam-slot.guessed::after{content:'✓ GUESSED';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:4px;color:var(--green);background:rgba(0,0,0,.6);z-index:20;}
@@ -191,6 +203,14 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
         <div class="hud-turn" id="hudTurn">turn: <span id="hudTurnName">—</span></div>
       </div>
       <div class="scores-bar" id="scoresBar"></div>
+      <div id="myCharPanel" style="display:none;">
+        <img class="panel-img" id="myCharImg" src="" alt="">
+        <div class="panel-info">
+          <div class="panel-label">your character (hidden)</div>
+          <div class="panel-name" id="myCharName">?????</div>
+          <div class="panel-cat" id="myCharCat"></div>
+        </div>
+      </div>
       <div class="messages" id="messages"></div>
       <div class="guess-row" id="guessRow">
         <input id="guessInput" placeholder="type your guess..." autocomplete="off" onkeydown="if(event.key==='Enter')submitGuess()">
@@ -439,6 +459,18 @@ async function loadGame(state){
   const pids=Object.keys(players);
   myNum=state.playerNums[myId];
   myChar=CHARACTERS[state.chars[myId]];
+  // populate my char panel (blurred)
+  const panel=$('myCharPanel');
+  const panelImg=$('myCharImg');
+  const panelName=$('myCharName');
+  const panelCat=$('myCharCat');
+  if(panel&&myChar){
+    panelImg.src=myChar.image;
+    panelImg.onerror=()=>{ panelImg.style.display='none'; };
+    panelName.innerText=myChar.name;
+    panelCat.innerText=myChar.category;
+    panel.style.display='flex';
+  }
   currentRound=state.round||1;
   currentTurnNum=state.turnNum||1;
   try{
@@ -498,7 +530,11 @@ function buildCams(state){
     // video
     const vid=document.createElement('video');
     vid.autoplay=true;vid.playsinline=true;
-    if(isMe){vid.muted=true;if(localStream)vid.srcObject=localStream;}
+    if(isMe&&localStream){
+      vid.muted=true;
+      vid.srcObject=localStream;
+      vid.onloadedmetadata=()=>{ vid.play().catch(()=>{}); vid.classList.add('live'); };
+    }
     slot.appendChild(vid);
 
     // player number
@@ -543,30 +579,100 @@ function connectMesh(pids,state){
     if(pid===myId)return;
     if(pid>myId){
       setTimeout(()=>{
-        if(!localStream)return;
-        const call=peer.call(pid,localStream);
+        const stream=localStream||new MediaStream();
+        const call=peer.call(pid,stream);
         connections[pid]=connections[pid]||{};
         connections[pid].call=call;
-        call.on('stream',stream=>{attachStream(pid,stream);});
+        call.on('stream',s=>{ attachStream(pid,s); });
+        // track event fallback
+        const waitForPc=setInterval(()=>{
+          const pc=call.peerConnection; if(!pc) return;
+          clearInterval(waitForPc);
+          pc.addEventListener('track',e=>{
+            if(e.track.kind==='video') attachTrackToSlot(pid, e.track);
+            if(e.streams&&e.streams[0]) attachStream(pid, e.streams[0]);
+          });
+          // poll for late video tracks
+          const pollTracks=setInterval(()=>{
+            if(!document.querySelector(`.cam-slot[data-pid="${pid}"]`)){ clearInterval(pollTracks); return; }
+            pc.getReceivers().forEach(r=>{
+              if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
+                attachTrackToSlot(pid, r.track);
+              }
+            });
+          }, 800);
+        }, 50);
       },800);
     }
   });
 }
 
 function handleIncomingCall(call){
-  if(!localStream)return;
-  call.answer(localStream);
+  // answer even if localStream isn't ready yet — we'll add tracks when ready
+  call.answer(localStream||new MediaStream());
   const pid=call.peer;
   connections[pid]=connections[pid]||{};
   connections[pid].call=call;
-  call.on('stream',stream=>{attachStream(pid,stream);});
+
+  call.on('stream',stream=>{ attachStream(pid,stream); });
+
+  // also hook into peerConnection track event for late tracks
+  const waitForPc=setInterval(()=>{
+    const pc=call.peerConnection; if(!pc) return;
+    clearInterval(waitForPc);
+    pc.addEventListener('track',e=>{
+      if(e.track.kind==='video') attachTrackToSlot(pid, e.track);
+      if(e.streams&&e.streams[0]) attachStream(pid, e.streams[0]);
+    });
+    // poll for late video tracks (delayed camera permission on mobile)
+    const pollTracks=setInterval(()=>{
+      if(!document.querySelector(`.cam-slot[data-pid="${pid}"]`)){ clearInterval(pollTracks); return; }
+      pc.getReceivers().forEach(r=>{
+        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
+          attachTrackToSlot(pid, r.track);
+        }
+      });
+    }, 800);
+    // also if our localStream gets added late, replace track
+    if(!localStream){
+      const waitStream=setInterval(()=>{
+        if(!localStream){ return; }
+        clearInterval(waitStream);
+        localStream.getTracks().forEach(t=>{
+          const sender=pc.getSenders().find(s=>s.track&&s.track.kind===t.kind);
+          if(sender) sender.replaceTrack(t).catch(()=>{});
+          else pc.addTrack(t, localStream);
+        });
+      }, 500);
+    }
+  }, 50);
+}
+
+function attachTrackToSlot(pid, track){
+  const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+  if(!slot)return;
+  const vid=slot.querySelector('video');
+  if(!vid)return;
+  let rs=vid.srcObject;
+  if(!rs||!(rs instanceof MediaStream)){ rs=new MediaStream(); vid.srcObject=rs; }
+  if(rs.getTracks().find(t=>t.id===track.id)) return;
+  rs.addTrack(track);
+  function tryPlay(){
+    vid.play().then(()=>vid.classList.add('live')).catch(()=>setTimeout(tryPlay,300));
+  }
+  tryPlay();
 }
 
 function attachStream(pid,stream){
   const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
   if(!slot)return;
   const vid=slot.querySelector('video');
-  if(vid)vid.srcObject=stream;
+  if(!vid)return;
+  vid.srcObject=stream;
+  function tryPlay(){
+    vid.play().then(()=>{ vid.classList.add('live'); }).catch(()=>setTimeout(tryPlay,300));
+  }
+  tryPlay();
 }
 
 /* ── TURN UI ── */
@@ -761,6 +867,14 @@ function hostNextRound(){
       const s2=snap2.val();
       myChar=CHARACTERS[s2.chars[myId]];
       buildCams(s2);
+      // update panel
+      const panelImg=$('myCharImg');
+      if(panelImg&&myChar){
+        panelImg.src=myChar.image;
+        $('myCharName').innerText=myChar.name;
+        $('myCharCat').innerText=myChar.category;
+        $('myCharPanel').style.display='flex';
+      }
     });
   });
 }
