@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rathe | Guess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #ff2d20; --green: #00ff87; --yellow: #ffd60a; --blue: #00b4ff;
+  --bg: #050505; --panel: #0c0c0c; --border: #1a1a1a; --muted: #444;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body,html{height:100dvh;width:100vw;background:var(--bg);color:#fff;font-family:'DM Mono',monospace;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:0.035;}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;padding:24px;z-index:10;}
+.screen.active{display:flex;}
+#modeScreen{background:var(--panel);animation:bgShift 20s cubic-bezier(.45,0,.55,1) infinite alternate;}
+@keyframes bgShift{0%{background:#080808}100%{background:#2a2a2a}}
+#lobbyScreen,#joinScreen{background:#070707;}
+
+/* SHARED */
+.logo-sm{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:6px;background:linear-gradient(135deg,#fff 0%,#888 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;}
+.sub{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:32px;}
+.btn{width:100%;max-width:340px;padding:16px;border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;cursor:pointer;transition:transform .15s,opacity .2s;}
+.btn:active{transform:scale(.97);}
+.btn-white{background:#fff;color:#000;}
+.btn-dark{background:#111;color:#fff;border:1px solid #2a2a2a;}
+.btn-ghost{background:transparent;color:#666;border:1px solid #222;font-size:1rem;}
+.gap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px;align-items:center;}
+.code-input{width:100%;max-width:340px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:12px;padding:18px;font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:8px;color:var(--green);text-align:center;text-transform:uppercase;margin-bottom:16px;outline:none;}
+.code-input:focus{border-color:#444;}
+.room-code-display{background:#0d0d0d;border:1px solid #222;border-radius:12px;padding:16px 24px;font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:8px;color:var(--green);margin-bottom:8px;text-align:center;}
+.room-code-hint{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:24px;}
+.player-list{width:100%;max-width:340px;display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+.player-slot{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:2px;color:#666;text-transform:uppercase;}
+.player-slot.filled{border-color:#2a2a2a;color:#aaa;}
+.player-slot.filled.me{border-color:rgba(0,255,135,0.3);color:var(--green);}
+.player-dot{width:8px;height:8px;border-radius:50%;background:#222;flex-shrink:0;}
+.player-dot.green{background:var(--green);box-shadow:0 0 6px rgba(0,255,135,0.6);}
+.lobby-status{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:16px;}
+
+/* GAME SCREEN */
+#gameScreen{background:#000;padding:0;justify-content:flex-start;overflow:hidden;}
+
+/* LAYOUT: cams left, chat right */
+.game-layout{display:flex;width:100vw;height:100dvh;}
+
+/* CAM AREA */
+.cams-area{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:0 0 58vw;height:100dvh;position:relative;}
+.cams-area.two{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}
+.cams-area.three{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+
+.cam-slot{position:relative;overflow:hidden;background:#060606;border:1px solid #111;}
+.cam-slot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.cam-slot.local video{transform:scaleX(-1);}
+
+/* PLAYER NUMBER BADGE */
+.player-num{position:absolute;top:8px;left:10px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#fff;z-index:10;text-shadow:0 2px 8px rgba(0,0,0,.8);}
+.player-num.active-turn{color:var(--green);}
+
+/* CHARACTER CARD — visible to others, hidden from self */
+.char-card{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(to top,rgba(0,0,0,.9),transparent);
+  padding:8px 10px 10px;z-index:10;
+}
+.char-card.hidden-self{filter:blur(40px);pointer-events:none;user-select:none;}
+.char-img{width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid #333;}
+.char-img.fallback{background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.char-name{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:#fff;}
+.char-cat{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+
+/* GUESSED OVERLAY */
+.cam-slot.guessed::after{content:'✓ GUESSED';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:4px;color:var(--green);background:rgba(0,0,0,.6);z-index:20;}
+
+/* TURN INDICATOR */
+#turnBar{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--green);z-index:30;transition:opacity .3s;}
+
+/* CHAT AREA */
+.chat-area{flex:1;display:flex;flex-direction:column;background:#080808;border-left:1px solid #111;min-width:0;}
+
+/* HUD */
+.chat-hud{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #111;flex-shrink:0;}
+.hud-round{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;color:var(--red);}
+.hud-turn{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.hud-turn span{color:var(--green);}
+
+/* SCORES */
+.scores-bar{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid #111;flex-shrink:0;flex-wrap:wrap;}
+.score-chip{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:20px;padding:4px 10px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#666;display:flex;align-items:center;gap:6px;}
+.score-chip.me{border-color:rgba(0,255,135,0.3);color:var(--green);}
+.score-chip .pts{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#fff;}
+
+/* MESSAGES */
+.messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;scrollbar-color:#1a1a1a transparent;}
+.msg{display:flex;flex-direction:column;gap:2px;}
+.msg-meta{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.msg-meta.me-meta{text-align:right;}
+.msg-bubble{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:8px 12px;font-size:11px;line-height:1.5;color:#ccc;max-width:90%;word-break:break-word;}
+.msg-bubble.me-bubble{background:#0d1f0d;border-color:rgba(0,255,135,0.2);color:#fff;align-self:flex-end;}
+.msg-bubble.system{background:transparent;border-color:transparent;color:var(--muted);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center;padding:4px;}
+.msg-bubble.correct{background:rgba(0,255,135,0.08);border-color:rgba(0,255,135,0.3);color:var(--green);}
+.msg-bubble.answer-yes{background:rgba(0,255,135,0.06);border-color:rgba(0,255,135,0.2);}
+.msg-bubble.answer-no{background:rgba(255,45,32,0.06);border-color:rgba(255,45,32,0.2);}
+
+/* ANSWER BUTTONS */
+.answer-row{display:flex;gap:8px;padding:6px 10px;border-top:1px solid #111;flex-shrink:0;}
+.ans-btn{flex:1;padding:10px;background:#0d0d0d;border:1px solid #222;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer;transition:background .15s,border-color .15s;display:none;}
+.ans-btn.yes{color:var(--green);border-color:rgba(0,255,135,0.3);}
+.ans-btn.yes:hover{background:rgba(0,255,135,0.08);}
+.ans-btn.no{color:var(--red);border-color:rgba(255,45,32,0.3);}
+.ans-btn.no:hover{background:rgba(255,45,32,0.08);}
+
+/* INPUT */
+.input-row{display:flex;gap:8px;padding:8px 10px;border-top:1px solid #111;flex-shrink:0;}
+#chatInput{flex:1;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:10px 12px;color:#fff;font-family:'DM Mono',monospace;font-size:11px;outline:none;min-width:0;}
+#chatInput:focus{border-color:#333;}
+#chatInput::placeholder{color:#333;}
+#sendBtn{background:#fff;color:#000;border:none;border-radius:8px;padding:10px 14px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer;flex-shrink:0;}
+#sendBtn:disabled{opacity:0.3;cursor:default;}
+
+/* GUESS INPUT ROW */
+.guess-row{display:flex;gap:8px;padding:6px 10px;border-top:1px solid #111;flex-shrink:0;display:none;}
+#guessInput{flex:1;background:#0d0d0d;border:1px solid rgba(255,214,10,0.3);border-radius:8px;padding:10px 12px;color:#fff;font-family:'DM Mono',monospace;font-size:11px;outline:none;}
+#guessInput::placeholder{color:#333;}
+#guessBtn{background:var(--yellow);color:#000;border:none;border-radius:8px;padding:10px 14px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer;flex-shrink:0;}
+
+/* ROUND END OVERLAY */
+#roundOverlay{position:fixed;inset:0;background:rgba(0,0,0,.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;padding:32px;gap:16px;backdrop-filter:blur(12px);text-align:center;}
+#roundOverlay.active{display:flex;}
+.ro-title{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:5px;color:var(--red);}
+.ro-scores{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;}
+.ro-score-row{display:flex;align-items:center;justify-content:space-between;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:12px 16px;}
+.ro-score-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#aaa;}
+.ro-score-pts{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green);}
+
+/* END OVERLAY */
+#endOverlay{position:fixed;inset:0;background:rgba(0,0,0,.97);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:600;padding:32px;gap:16px;backdrop-filter:blur(16px);text-align:center;}
+#endOverlay.active{display:flex;}
+.eo-title{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:5px;}
+.eo-winner{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:-8px;}
+
+/* TOAST */
+#gtoast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:#111;border:1px solid #333;border-radius:10px;padding:12px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#fff;z-index:99999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;}
+#gtoast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="gtoast"></div>
+
+<!-- MODE SELECT -->
+<div class="screen active" id="modeScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub">guess the person</div>
+  <div class="gap">
+    <button class="btn btn-white" onclick="startCreate()">🎭 &nbsp;CREATE ROOM</button>
+    <button class="btn btn-dark" onclick="showScreen('joinScreen')">🔑 &nbsp;JOIN WITH CODE</button>
+    <button class="btn btn-ghost" onclick="window.location.href='index.html'">← BACK TO RATHE</button>
+  </div>
+</div>
+
+<!-- JOIN SCREEN -->
+<div class="screen" id="joinScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub">enter room code</div>
+  <input class="code-input" id="codeInput" maxlength="6" placeholder="XXXXXX" oninput="this.value=this.value.toUpperCase()">
+  <div class="gap">
+    <button class="btn btn-white" onclick="joinRoom()">JOIN ROOM</button>
+    <button class="btn btn-ghost" onclick="showScreen('modeScreen')">BACK</button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="lobbyScreen">
+  <div class="logo-sm">RATHE</div>
+  <div class="sub" id="lobbySubText">waiting for players</div>
+  <div class="room-code-display" id="lobbyCode">------</div>
+  <div class="room-code-hint">share this code · 2–4 players</div>
+  <div class="lobby-status">players: <span id="lobbyCountEl" style="color:#fff">1</span> / 4</div>
+  <div class="player-list" id="playerListEl"></div>
+  <div class="gap">
+    <button class="btn btn-white" id="startGameBtn" style="opacity:0.3;pointer-events:none" onclick="hostStartGame()">START GAME</button>
+    <button class="btn btn-ghost" onclick="leaveGame()">LEAVE</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="gameScreen">
+  <div class="game-layout">
+    <div class="cams-area" id="camsArea">
+      <!-- cam slots built dynamically -->
+    </div>
+    <div class="chat-area">
+      <div class="chat-hud">
+        <div class="hud-round" id="hudRound">ROUND 1 / 3</div>
+        <div class="hud-turn" id="hudTurn">turn: <span id="hudTurnName">—</span></div>
+      </div>
+      <div class="scores-bar" id="scoresBar"></div>
+      <div class="messages" id="messages"></div>
+      <div class="answer-row" id="answerRow">
+        <button class="ans-btn yes" id="ansYes" onclick="sendAnswer('YES ✓')">YES</button>
+        <button class="ans-btn no" id="ansNo" onclick="sendAnswer('NO ✗')">NO</button>
+      </div>
+      <div class="guess-row" id="guessRow">
+        <input id="guessInput" placeholder="type your guess..." autocomplete="off">
+        <button id="guessBtn" onclick="submitGuess()">GUESS</button>
+      </div>
+      <div class="input-row">
+        <input id="chatInput" placeholder="ask a question..." autocomplete="off" onkeydown="if(event.key==='Enter')sendQuestion()">
+        <button id="sendBtn" onclick="sendQuestion()">SEND</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROUND END -->
+<div id="roundOverlay">
+  <div class="ro-title" id="roTitle">ROUND 1 OVER</div>
+  <div class="ro-scores" id="roScores"></div>
+  <button class="btn btn-white" style="max-width:280px;margin-top:8px" id="nextRoundBtn" onclick="hostNextRound()" style="display:none">NEXT ROUND</button>
+  <button class="btn btn-ghost" style="max-width:280px" onclick="leaveGame()">LEAVE</button>
+</div>
+
+<!-- END -->
+<div id="endOverlay">
+  <div class="eo-title" id="eoTitle" style="color:var(--green)">GAME OVER</div>
+  <div class="eo-winner" id="eoWinner"></div>
+  <div class="ro-scores" id="eoScores" style="margin-top:16px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px;"></div>
+  <button class="btn btn-white" style="max-width:280px;margin-top:16px" onclick="window.location.href='guess.html'">PLAY AGAIN</button>
+  <button class="btn btn-ghost" style="max-width:280px" onclick="window.location.href='index.html'">BACK TO RATHE</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+/* ── DATASET ── */
+const CHARACTERS = [
+  {name:"Goku",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/0/04/Goku_Dragon_Ball_Z.png"},
+  {name:"Naruto Uzumaki",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/94/NarutoCoverTankobon1.jpg"},
+  {name:"Monkey D. Luffy",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png"},
+  {name:"Saitama",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/c3/Saitama_OnePunchMan.png"},
+  {name:"Levi Ackerman",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/2/2e/Levi_Ackerman.png"},
+  {name:"Light Yagami",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9f/Light_Yagami.jpg"},
+  {name:"Gojo Satoru",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9a/Satoru_Gojo.png"},
+  {name:"Eren Yeager",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9b/Eren_Yeager.png"},
+  {name:"Tanjiro Kamado",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/7/74/Tanjiro_Kamado.png"},
+  {name:"Drake",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/bd/Drake_July_2016.jpg"},
+  {name:"Kendrick Lamar",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/6/61/Kendrick_Lamar_2018_Pulitzer_Prize.jpg"},
+  {name:"Eminem",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/b5/Eminem_2021.jpg"},
+  {name:"Travis Scott",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/2/28/Travis_Scott_2019_by_Glenn_Francis.jpg"},
+  {name:"Kanye West",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Kanye_West_at_the_2009_Tribeca_Film_Festival.jpg"},
+  {name:"The Weeknd",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/9/95/The_Weeknd_Cannes_2023.png"},
+  {name:"Taylor Swift",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/f/f2/Taylor_Swift_2_-_2024.jpg"},
+  {name:"Michael Jackson",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/5/55/Michael_Jackson_in_1988.jpg"},
+  {name:"Billie Eilish",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Billie_Eilish_2019_by_Glenn_Francis.jpg"},
+  {name:"Bruno Mars",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/a/a4/Bruno_Mars_Live_Brazil.jpg"},
+  {name:"Cristiano Ronaldo",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"},
+  {name:"Lionel Messi",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg"},
+  {name:"MrBeast",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/5/58/MrBeast_2023.jpg"},
+  {name:"Elon Musk",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ed/Elon_Musk_Royal_Society.jpg"},
+  {name:"Dwayne Johnson",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Dwayne_Johnson_2014.jpg"},
+  {name:"Tom Holland",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/3/34/Tom_Holland_by_Gage_Skidmore.jpg"},
+  {name:"Johnny Depp",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/2/21/Johnny_Depp_2020.jpg"},
+  {name:"Keanu Reeves",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Keanu_Reeves_2013.jpg"},
+  {name:"Zendaya",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ef/Zendaya_2019_by_Glenn_Francis.jpg"},
+  {name:"Ryan Reynolds",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/04/Ryan_Reynolds_by_Gage_Skidmore.jpg"},
+  {name:"Lion",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg"},
+  {name:"Tiger",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/Tiger.50.jpg"},
+  {name:"Panda",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Grosser_Panda.JPG"},
+  {name:"Penguin",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/e/e8/Emperor_Penguin_Manchot_empereur.jpg"},
+  {name:"Wolf",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/1/12/Canis_lupus_laying.jpg"},
+  {name:"Elephant",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg"},
+  {name:"Gorilla",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Gorilla_gorilla_gorilla8.jpg"},
+  {name:"Shark",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/White_shark.jpg"},
+  {name:"Crocodile",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/7e/NileCrocodile.jpg"},
+  {name:"Koala",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Koala_climbing_tree.jpg"}
+];
+
+/* ── FIREBASE ── */
+firebase.initializeApp({
+  apiKey:"AIzaSyCCkxzgBDC5355GHUonhK6_C3RBDaWdKDA",
+  authDomain:"rate-then-hate-backend.firebaseapp.com",
+  databaseURL:"https://rate-then-hate-backend-default-rtdb.firebaseio.com",
+  projectId:"rate-then-hate-backend",
+  storageBucket:"rate-then-hate-backend.firebasestorage.app",
+  messagingSenderId:"195653571803",
+  appId:"1:195653571803:web:6482704037cb0f2835e8fe"
+});
+const db = firebase.database();
+
+/* ── PEER ── */
+function createPeer(){
+  return new Peer(undefined,{
+    host:'my-peer-server-mjl5.onrender.com',port:443,path:'/peerjs',secure:true,debug:1,
+    config:{iceServers:[
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun1.l.google.com:19302'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+    ]}
+  });
+}
+
+/* ── STATE ── */
+let peer=null, myId=null;
+let gameId=null, isHost=false;
+let localStream=null;
+let players={};       // pid -> { peerId, num, charIndex, score, guessed }
+let myNum=null;       // my player number 1-4
+let myChar=null;      // my assigned character
+let currentTurnNum=1; // whose turn it is (1-4)
+let currentRound=1;
+let roundCorrect=0;   // how many correct guesses this round
+let connections={};   // pid -> {call, data}
+let pendingQuestion=null; // last question asked (for answer buttons)
+
+const $=id=>document.getElementById(id);
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function showToast(msg,dur=3000){const t=$('gtoast');t.innerText=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+
+/* ── PEER INIT ── */
+function initPeer(cb){
+  if(peer&&!peer.destroyed&&myId){if(cb)cb();return;}
+  if(peer){try{peer.destroy();}catch(e){}peer=null;myId=null;}
+  peer=createPeer();
+  peer.on('open',id=>{myId=id;if(cb)cb();});
+  peer.on('error',err=>{
+    console.error('peer error',err);
+    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
+      setTimeout(()=>initPeer(cb),2000);
+    } else {
+      showToast('connection error');
+    }
+  });
+  peer.on('call',handleIncomingCall);
+}
+
+/* ── ROOM CREATION ── */
+function startCreate(){
+  initPeer(()=>{
+    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    gameId='guess_'+code;
+    isHost=true;
+    $('lobbyCode').innerText=code;
+    $('lobbySubText').innerText='your room';
+    showScreen('lobbyScreen');
+    joinLobby();
+  });
+}
+
+function joinRoom(){
+  const code=$('codeInput').value.trim().toUpperCase();
+  if(code.length!==6){showToast('enter a 6-digit code');return;}
+  gameId='guess_'+code;
+  isHost=false;
+  initPeer(()=>{
+    $('lobbyCode').innerText=code;
+    $('lobbySubText').innerText='joining room...';
+    showScreen('lobbyScreen');
+    joinLobby();
+  });
+}
+
+/* ── LOBBY ── */
+function joinLobby(){
+  const ref=db.ref(`guess_rooms/${gameId}/players`);
+  ref.child(myId).set({peerId:myId,joinedAt:Date.now()});
+  ref.child(myId).onDisconnect().remove();
+  ref.on('value',snap=>{
+    players={};
+    const val=snap.val();
+    if(val)Object.entries(val).forEach(([pid,p])=>{players[pid]=p;});
+    renderLobby();
+  });
+  db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
+    const val=snap.val();
+    if(!val)return;
+    if(val.status==='started')loadGame(val);
+  });
+}
+
+function renderLobby(){
+  const pids=Object.keys(players);
+  const list=$('playerListEl');
+  list.innerHTML='';
+  for(let i=0;i<Math.max(2,pids.length);i++){
+    const slot=document.createElement('div');
+    slot.className='player-slot';
+    if(i<pids.length){
+      slot.classList.add('filled');
+      if(pids[i]===myId)slot.classList.add('me');
+      slot.innerHTML=`<div class="player-dot green"></div>${pids[i]===myId?'you':'player '+(i+1)}`;
+    }else{
+      slot.innerHTML=`<div class="player-dot"></div>waiting...`;
+    }
+    list.appendChild(slot);
+  }
+  $('lobbyCountEl').innerText=pids.length;
+  const btn=$('startGameBtn');
+  if(isHost&&pids.length>=2&&pids.length<=4){
+    btn.style.opacity='1';btn.style.pointerEvents='all';
+  }else{
+    btn.style.opacity='0.3';btn.style.pointerEvents='none';
+  }
+}
+
+/* ── HOST STARTS ── */
+function hostStartGame(){
+  if(!isHost)return;
+  const pids=Object.keys(players);
+  if(pids.length<2||pids.length>4){showToast('need 2-4 players');return;}
+  // shuffle and assign numbers 1-N
+  const shuffled=[...pids].sort(()=>Math.random()-.5);
+  const nums={};
+  shuffled.forEach((pid,i)=>{nums[pid]=i+1;});
+  // assign characters (unique per round)
+  const charPool=[...CHARACTERS].sort(()=>Math.random()-.5);
+  const chars={};
+  shuffled.forEach((pid,i)=>{chars[pid]=CHARACTERS.indexOf(charPool[i]);});
+  const scores={};
+  shuffled.forEach(pid=>{scores[pid]=0;});
+  db.ref(`guess_rooms/${gameId}/state`).set({
+    status:'started',
+    round:1,
+    turnNum:1,
+    playerNums:nums,
+    chars,
+    scores,
+    guessed:{},
+    roundCorrect:0
+  });
+}
+
+/* ── LOAD GAME ── */
+async function loadGame(state){
+  if($('gameScreen').classList.contains('active'))return;
+  const pids=Object.keys(players);
+  myNum=state.playerNums[myId];
+  myChar=CHARACTERS[state.chars[myId]];
+  currentRound=state.round||1;
+  currentTurnNum=state.turnNum||1;
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+  }catch(e){showToast('camera/mic needed');}
+  showScreen('gameScreen');
+  buildCams(state);
+  renderScores(state);
+  updateTurnUI(state);
+  connectMesh(pids,state);
+  // listen for game updates
+  db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
+    const s=snap.val();if(!s)return;
+    currentRound=s.round||1;
+    currentTurnNum=s.turnNum||1;
+    renderScores(s);
+    updateTurnUI(s);
+    if(s.guessed){
+      Object.entries(s.guessed).forEach(([pid,g])=>{
+        if(g){
+          const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+          if(slot)slot.classList.add('guessed');
+        }
+      });
+    }
+    if(s.status==='round_end')showRoundEnd(s);
+    if(s.status==='game_end')showGameEnd(s);
+  });
+  // listen for chat
+  db.ref(`guess_rooms/${gameId}/chat`).on('child_added',snap=>{
+    const msg=snap.val();
+    appendMessage(msg);
+  });
+}
+
+/* ── BUILD CAMS ── */
+function buildCams(state){
+  const pids=Object.keys(players);
+  const area=$('camsArea');
+  area.innerHTML='';
+  area.className='cams-area';
+  if(pids.length===2)area.classList.add('two');
+  else area.classList.add('three');
+
+  // sort by player number
+  const sorted=[...pids].sort((a,b)=>state.playerNums[a]-state.playerNums[b]);
+  sorted.forEach(pid=>{
+    const num=state.playerNums[pid];
+    const charIdx=state.chars[pid];
+    const char=CHARACTERS[charIdx];
+    const isMe=pid===myId;
+
+    const slot=document.createElement('div');
+    slot.className='cam-slot'+(isMe?' local':'');
+    slot.dataset.pid=pid;
+
+    // video
+    const vid=document.createElement('video');
+    vid.autoplay=true;vid.playsinline=true;
+    if(isMe){vid.muted=true;if(localStream)vid.srcObject=localStream;}
+    slot.appendChild(vid);
+
+    // player number
+    const numEl=document.createElement('div');
+    numEl.className='player-num';
+    numEl.id='playerNum_'+pid;
+    numEl.innerText='#'+num;
+    slot.appendChild(numEl);
+
+    // character card — blurred if it's yours
+    const card=document.createElement('div');
+    card.className='char-card'+(isMe?' hidden-self':'');
+    card.id='charCard_'+pid;
+
+    const img=document.createElement('img');
+    img.className='char-img';
+    img.src=char.image;
+    img.alt=char.name;
+    img.onerror=()=>{img.style.display='none';};
+    card.appendChild(img);
+
+    const info=document.createElement('div');
+    info.innerHTML=`<div class="char-name">${char.name}</div><div class="char-cat">${char.category}</div>`;
+    card.appendChild(info);
+    slot.appendChild(card);
+
+    area.appendChild(slot);
+  });
+}
+
+/* ── MESH ── */
+function connectMesh(pids,state){
+  const sorted=[...pids].sort((a,b)=>state.playerNums[a]-state.playerNums[b]);
+  sorted.forEach(pid=>{
+    if(pid===myId)return;
+    if(pid>myId){
+      setTimeout(()=>{
+        if(!localStream)return;
+        const call=peer.call(pid,localStream);
+        connections[pid]=connections[pid]||{};
+        connections[pid].call=call;
+        call.on('stream',stream=>{attachStream(pid,stream);});
+      },800);
+    }
+  });
+}
+
+function handleIncomingCall(call){
+  if(!localStream)return;
+  call.answer(localStream);
+  const pid=call.peer;
+  connections[pid]=connections[pid]||{};
+  connections[pid].call=call;
+  call.on('stream',stream=>{attachStream(pid,stream);});
+}
+
+function attachStream(pid,stream){
+  const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+  if(!slot)return;
+  const vid=slot.querySelector('video');
+  if(vid)vid.srcObject=stream;
+}
+
+/* ── TURN UI ── */
+function updateTurnUI(state){
+  const turnNum=state.turnNum||1;
+  // find pid with this number
+  const turnPid=Object.keys(state.playerNums||{}).find(p=>state.playerNums[p]===turnNum);
+  const isMyTurn=turnPid===myId;
+
+  $('hudRound').innerText=`ROUND ${state.round||1} / 3`;
+  $('hudTurnName').innerText=isMyTurn?'YOUR TURN':'player #'+turnNum;
+
+  // highlight active cam
+  document.querySelectorAll('.player-num').forEach(el=>{
+    const pid=el.id.replace('playerNum_','');
+    el.classList.toggle('active-turn',pid===turnPid);
+  });
+
+  // show/hide input based on turn
+  const chatInput=$('chatInput');
+  const sendBtn=$('sendBtn');
+  const guessRow=$('guessRow');
+
+  if(isMyTurn&&!state.guessed?.[myId]){
+    chatInput.disabled=false;
+    sendBtn.disabled=false;
+    chatInput.placeholder='ask a question...';
+    guessRow.style.display='flex';
+  }else{
+    chatInput.disabled=true;
+    sendBtn.disabled=true;
+    chatInput.placeholder=isMyTurn?'you already guessed!':'waiting for player #'+turnNum+'...';
+    guessRow.style.display='none';
+  }
+
+  // show answer buttons if not my turn and someone just asked
+  updateAnswerButtons(state, isMyTurn);
+}
+
+function updateAnswerButtons(state, isMyTurn){
+  const ansRow=$('answerRow');
+  // show answer buttons when it's not your turn and there's a pending question
+  // we track this via Firebase
+  if(!isMyTurn&&state.pendingQuestion&&!state.pendingQuestion?.answeredBy?.[myId]){
+    $('ansYes').style.display='block';
+    $('ansNo').style.display='block';
+  }else{
+    $('ansYes').style.display='none';
+    $('ansNo').style.display='none';
+  }
+}
+
+/* ── SCORES ── */
+function renderScores(state){
+  const bar=$('scoresBar');
+  bar.innerHTML='';
+  if(!state.playerNums)return;
+  const sorted=Object.keys(state.playerNums).sort((a,b)=>state.playerNums[a]-state.playerNums[b]);
+  sorted.forEach(pid=>{
+    const chip=document.createElement('div');
+    chip.className='score-chip'+(pid===myId?' me':'');
+    const pts=state.scores?.[pid]||0;
+    chip.innerHTML=`<span>#${state.playerNums[pid]}</span><span class="pts">${pts}</span>`;
+    bar.appendChild(chip);
+  });
+}
+
+/* ── CHAT ── */
+function appendMessage(msg){
+  const box=$('messages');
+  const div=document.createElement('div');
+  div.className='msg';
+  const isMe=msg.pid===myId;
+  const isSystem=msg.type==='system';
+  const isCorrect=msg.type==='correct';
+
+  if(isSystem||isCorrect){
+    div.innerHTML=`<div class="msg-bubble ${isCorrect?'correct':'system'}">${msg.text}</div>`;
+  }else{
+    let bubbleClass='msg-bubble'+(isMe?' me-bubble':'');
+    if(msg.type==='answer'){
+      bubbleClass+=(msg.text.includes('YES')?' answer-yes':' answer-no');
+    }
+    div.innerHTML=`
+      <div class="msg-meta ${isMe?'me-meta':''}">#${msg.num} ${isMe?'(you)':''}</div>
+      <div class="${bubbleClass}">${msg.text}</div>`;
+  }
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+
+function pushMsg(text,type='chat'){
+  const num=Object.values(players).find?.(p=>p?.peerId===myId)?.num||
+    Object.entries(players).find(([pid])=>pid===myId)?.[1]?.num||myNum||'?';
+  db.ref(`guess_rooms/${gameId}/chat`).push({
+    pid:myId,num,text,type,ts:Date.now()
+  });
+}
+
+function sendQuestion(){
+  const input=$('chatInput');
+  const text=input.value.trim();
+  if(!text)return;
+  // check it's my turn
+  db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+    const s=snap.val();
+    if(!s)return;
+    const turnPid=Object.keys(s.playerNums||{}).find(p=>s.playerNums[p]===s.turnNum);
+    if(turnPid!==myId){showToast("it's not your turn");return;}
+    if(s.guessed?.[myId]){showToast('you already guessed this round');return;}
+    pushMsg(text,'question');
+    // store pending question so others see answer buttons
+    db.ref(`guess_rooms/${gameId}/state/pendingQuestion`).set({text,asker:myId,answeredBy:{}});
+    input.value='';
+  });
+}
+
+function sendAnswer(text){
+  // mark answered
+  db.ref(`guess_rooms/${gameId}/state/pendingQuestion/answeredBy/${myId}`).set(true);
+  pushMsg(text,'answer');
+  // check if all non-asker players answered
+  db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+    const s=snap.val();
+    if(!s||!s.pendingQuestion)return;
+    const asker=s.pendingQuestion.asker;
+    const answeredBy=Object.keys(s.pendingQuestion.answeredBy||{});
+    const shouldAnswer=Object.keys(s.playerNums||{}).filter(p=>p!==asker&&!s.guessed?.[p]);
+    if(answeredBy.length>=shouldAnswer.length){
+      // all answered — advance turn
+      advanceTurn(s);
+    }
+  });
+}
+
+function advanceTurn(state){
+  if(!isHost)return;
+  const pids=Object.keys(state.playerNums||{});
+  const total=pids.length;
+  // find next unguessed player in order
+  let next=state.turnNum;
+  for(let i=0;i<total;i++){
+    next=(next%total)+1;
+    const nextPid=Object.keys(state.playerNums).find(p=>state.playerNums[p]===next);
+    if(!state.guessed?.[nextPid]){break;}
+  }
+  db.ref(`guess_rooms/${gameId}/state`).update({turnNum:next,pendingQuestion:null});
+}
+
+function submitGuess(){
+  const input=$('guessInput');
+  const text=input.value.trim();
+  if(!text)return;
+  // check it's my turn
+  db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+    const s=snap.val();if(!s)return;
+    const turnPid=Object.keys(s.playerNums||{}).find(p=>s.playerNums[p]===s.turnNum);
+    if(turnPid!==myId){showToast("it's not your turn");return;}
+    if(s.guessed?.[myId]){showToast('you already guessed');return;}
+    // check guess
+    const correct=text.trim().toLowerCase()===myChar.name.toLowerCase();
+    pushMsg(`GUESS: ${text}${correct?' ✓':' ✗'}`,correct?'correct':'chat');
+    if(correct){
+      const roundCorrectNow=(s.roundCorrect||0)+1;
+      const pts=roundCorrectNow===1?3:roundCorrectNow===2?2:1;
+      const updates={};
+      updates[`guessed/${myId}`]=true;
+      updates[`scores/${myId}`]=(s.scores?.[myId]||0)+pts;
+      updates['roundCorrect']=roundCorrectNow;
+      updates['pendingQuestion']=null;
+      // push system message
+      db.ref(`guess_rooms/${gameId}/chat`).push({
+        pid:'system',num:0,
+        text:`🎉 Player #${myNum} guessed correctly! (+${pts} pts)`,
+        type:'correct',ts:Date.now()
+      });
+      if(roundCorrectNow>=2){
+        // round over — give remaining players 1 pt each
+        const remaining=Object.keys(s.playerNums||{}).filter(p=>p!==myId&&!s.guessed?.[p]);
+        remaining.forEach(p=>{updates[`scores/${p}`]=(s.scores?.[p]||0)+1;});
+        updates['status']=s.round>=3?'game_end':'round_end';
+      } else {
+        // advance turn
+        const total=Object.keys(s.playerNums||{}).length;
+        let next=s.turnNum;
+        for(let i=0;i<total;i++){
+          next=(next%total)+1;
+          const nextPid=Object.keys(s.playerNums).find(p=>s.playerNums[p]===next);
+          if(!s.guessed?.[nextPid]&&nextPid!==myId){break;}
+        }
+        updates['turnNum']=next;
+      }
+      db.ref(`guess_rooms/${gameId}/state`).update(updates);
+    }
+    input.value='';
+  });
+}
+
+/* ── ROUND END ── */
+function showRoundEnd(state){
+  const overlay=$('roundOverlay');
+  $('roTitle').innerText=`ROUND ${state.round} OVER`;
+  const scoresEl=$('roScores');
+  scoresEl.innerHTML='';
+  const sorted=Object.keys(state.playerNums||{}).sort((a,b)=>(state.scores?.[b]||0)-(state.scores?.[a]||0));
+  sorted.forEach(pid=>{
+    const row=document.createElement('div');
+    row.className='ro-score-row';
+    row.innerHTML=`<span class="ro-score-name">${pid===myId?'you':'player #'+state.playerNums[pid]}</span><span class="ro-score-pts">${state.scores?.[pid]||0} pts</span>`;
+    scoresEl.appendChild(row);
+  });
+  const nextBtn=$('nextRoundBtn');
+  if(isHost&&state.round<3){
+    nextBtn.style.display='block';
+  }else{
+    nextBtn.style.display='none';
+  }
+  overlay.classList.add('active'); // not using display:flex toggle — use class
+  overlay.style.display='flex';
+}
+
+function hostNextRound(){
+  if(!isHost)return;
+  db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+    const s=snap.val();if(!s)return;
+    const pids=Object.keys(s.playerNums||{});
+    // new characters
+    const charPool=[...CHARACTERS].sort(()=>Math.random()-.5);
+    const chars={};
+    pids.forEach((pid,i)=>{chars[pid]=CHARACTERS.indexOf(charPool[i]);});
+    db.ref(`guess_rooms/${gameId}/state`).update({
+      status:'started',
+      round:(s.round||1)+1,
+      turnNum:1,
+      chars,
+      guessed:{},
+      roundCorrect:0,
+      pendingQuestion:null
+    });
+    // clear chat
+    db.ref(`guess_rooms/${gameId}/chat`).remove();
+    $('roundOverlay').style.display='none';
+    // reload chars in UI
+    db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap2=>{
+      const s2=snap2.val();
+      myChar=CHARACTERS[s2.chars[myId]];
+      buildCams(s2);
+    });
+  });
+}
+
+/* ── GAME END ── */
+function showGameEnd(state){
+  $('roundOverlay').style.display='none';
+  const sorted=Object.keys(state.playerNums||{}).sort((a,b)=>(state.scores?.[b]||0)-(state.scores?.[a]||0));
+  const winnerPid=sorted[0];
+  const isWinner=winnerPid===myId;
+  $('eoTitle').innerText=isWinner?'YOU WIN!':'GAME OVER';
+  $('eoTitle').style.color=isWinner?'var(--green)':'var(--red)';
+  $('eoWinner').innerText=isWinner?'you had the most points':`player #${state.playerNums?.[winnerPid]} wins`;
+  const scoresEl=$('eoScores');
+  scoresEl.innerHTML='';
+  sorted.forEach(pid=>{
+    const row=document.createElement('div');
+    row.className='ro-score-row';
+    row.innerHTML=`<span class="ro-score-name">${pid===myId?'you':'player #'+state.playerNums[pid]}</span><span class="ro-score-pts">${state.scores?.[pid]||0} pts</span>`;
+    scoresEl.appendChild(row);
+  });
+  $('endOverlay').style.display='flex';
+}
+
+/* ── LEAVE ── */
+function leaveGame(){
+  if(gameId&&myId)db.ref(`guess_rooms/${gameId}/players/${myId}`).remove();
+  if(peer)try{peer.destroy();}catch(e){}
+  window.location.href='index.html';
+}
+</script>
+</body>
+</html>
