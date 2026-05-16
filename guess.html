@@ -46,13 +46,28 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 /* GAME SCREEN */
 #gameScreen{background:#000;padding:0;justify-content:flex-start;overflow:hidden;}
 
-/* LAYOUT: cams left, chat right */
+/* LAYOUT: cams left, chat right on desktop / cams top chat bottom on mobile */
 .game-layout{display:flex;width:100vw;height:100dvh;}
 
 /* CAM AREA */
 .cams-area{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:0 0 58vw;height:100dvh;position:relative;}
 .cams-area.two{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}
 .cams-area.three{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+
+@media(max-width:600px){
+  .game-layout{flex-direction:column;}
+  .cams-area{flex:0 0 45dvh;width:100vw;height:45dvh;grid-template-columns:1fr 1fr;grid-template-rows:1fr;}
+  .cams-area.two{grid-template-columns:1fr 1fr;grid-template-rows:1fr;}
+  .cams-area.three{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr;}
+  .chat-area{flex:1;border-left:none;border-top:1px solid #111;min-height:0;}
+  .char-panel-item{padding:6px 8px;}
+  .cpi-img{width:32px;height:32px;}
+  .cpi-name{font-size:0.85rem;}
+  .chat-hud{padding:6px 10px;}
+  .hud-round{font-size:0.9rem;}
+  .messages{padding:6px;}
+  #charsPanel{flex-wrap:nowrap;overflow-x:auto;}
+}
 
 .cam-slot{position:relative;overflow:hidden;background:#060606;border:2px solid var(--green);box-shadow:0 0 12px rgba(0,255,135,0.4),0 0 32px rgba(0,255,135,0.1),inset 0 0 12px rgba(0,255,135,0.04);}
 .cam-slot video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s ease;}
@@ -512,7 +527,7 @@ function buildCharsPanel(state){
       const fb=document.createElement('div');
       fb.className='cpi-img';
       fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;';
-      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾'};
+      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾',superhero:'🦸',fictional:'📖',athlete:'🏆'};
       fb.innerText=cats[char.category]||'?';
       item.insertBefore(fb,item.firstChild);
     };
@@ -627,7 +642,7 @@ function buildCams(state){
       img.style.display='none';
       const emoji=document.createElement('div');
       emoji.style.cssText='width:36px;height:36px;border-radius:6px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid #333;';
-      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾'};
+      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾',superhero:'🦸',fictional:'📖',athlete:'🏆'};
       emoji.innerText=cats[char.category]||'?';
       img.parentNode.insertBefore(emoji,img);
     };
@@ -644,20 +659,20 @@ function buildCams(state){
 
 /* ── MESH ── */
 function connectMesh(pids,state){
-  const sorted=[...pids].sort((a,b)=>state.playerNums[a]-state.playerNums[b]);
-  sorted.forEach(pid=>{
-    if(pid===myId)return;
-    if(pid>myId){
-      // wait for localStream before calling — poll until ready
-      let attempts=0;
-      const tryCall=setInterval(()=>{
-        attempts++;
-        if(attempts>20){ clearInterval(tryCall); return; } // give up after 10s
-        if(!localStream) return;
-        clearInterval(tryCall);
-        setupOutgoingCall(pid);
-      },500);
-    }
+  // every player calls all players whose ID is lexicographically smaller
+  // this guarantees exactly one call per pair regardless of how many players
+  pids.forEach(pid=>{
+    if(pid===myId||pid>=myId) return; // I only call pids smaller than mine
+    let attempts=0;
+    const tryCall=setInterval(()=>{
+      attempts++;
+      if(attempts>30){ clearInterval(tryCall); console.warn('gave up calling',pid); return; }
+      if(!localStream) return;
+      clearInterval(tryCall);
+      // small stagger based on player number to avoid simultaneous calls
+      const myN=state.playerNums[myId]||1;
+      setTimeout(()=>setupOutgoingCall(pid), myN*300);
+    },500);
   });
 }
 
