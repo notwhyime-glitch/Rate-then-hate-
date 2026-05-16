@@ -439,10 +439,10 @@ function joinLobby(){
     const val=snap.val();
     if(val)Object.entries(val).forEach(([pid,p])=>{players[pid]=p;});
     renderLobby();
-    // if in game and only 1 player left, end the game
+    // if in game and only 1 player left, auto leave
     if(gameLoaded && Object.keys(players).length < 2){
-      showToast('all other players left — game over');
-      setTimeout(()=>{ window.location.href='index.html'; }, 2500);
+      showToast('everyone left — game over');
+      setTimeout(()=>{ leaveGame(); }, 2000);
     }
   });
   db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
@@ -564,9 +564,11 @@ async function loadGame(state){
   updateTurnUI(state);
   connectMesh(pids,state);
   // listen for game updates
+  let lastRound=1;
   db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
     const s=snap.val();if(!s)return;
-    currentRound=s.round||1;
+    const newRound=s.round||1;
+    currentRound=newRound;
     currentTurnNum=s.turnNum||1;
     renderScores(s);
     updateTurnUI(s);
@@ -578,8 +580,18 @@ async function loadGame(state){
         }
       });
     }
-    if(s.status==='round_end')showRoundEnd(s);
-    if(s.status==='game_end')showGameEnd(s);
+    if(s.status==='round_end') showRoundEnd(s);
+    if(s.status==='game_end') showGameEnd(s);
+    // new round started — rebuild UI for ALL clients not just host
+    if(s.status==='started' && newRound > lastRound){
+      lastRound=newRound;
+      myChar=CHARACTERS[s.chars[myId]];
+      $('roundOverlay').style.display='none';
+      $('messages').innerHTML='';
+      buildCams(s);
+      buildCharsPanel(s);
+    }
+    lastRound=Math.max(lastRound,newRound);
   });
   // listen for chat
   db.ref(`guess_rooms/${gameId}/chat`).on('child_added',snap=>{
@@ -684,45 +696,78 @@ function setupOutgoingCall(pid){
 }
 
 function setupCallHandlers(pid,call){
-  call.on('stream',stream=>{ attachStream(pid,stream); });
+  // legacy stream event — works on some browsers
+  call.on('stream',stream=>{
+    if(stream.getVideoTracks().length>0) attachStream(pid,stream);
+    else if(stream.getAudioTracks().length>0){
+      // audio only stream — attach audio, video will come via track event
+      const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+      if(slot){
+        let rs=slot.querySelector('video').srcObject;
+        if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();slot.querySelector('video').srcObject=rs;}
+        stream.getAudioTracks().forEach(t=>{if(!rs.getTracks().find(x=>x.id===t.id))rs.addTrack(t);});
+      }
+    }
+  });
+
   const waitForPc=setInterval(()=>{
     const pc=call.peerConnection; if(!pc) return;
     clearInterval(waitForPc);
+
+    // primary: track event
     pc.addEventListener('track',e=>{
-      if(e.streams&&e.streams[0]) attachStream(pid,e.streams[0]);
-      else if(e.track&&e.track.kind==='video') attachTrackToSlot(pid,e.track);
+      const stream=e.streams&&e.streams[0];
+      if(stream) attachStream(pid,stream);
+      else attachTrackToSlot(pid,e.track);
     });
-    // poll for late tracks (mobile delayed permission)
+
+    // ICE connected — pull any tracks already received
+    pc.addEventListener('iceconnectionstatechange',()=>{
+      if(pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed'){
+        pc.getReceivers().forEach(r=>{
+          if(r.track&&r.track.readyState==='live') attachTrackToSlot(pid,r.track);
+        });
+      }
+    });
+
+    // poll fallback — keeps checking for late tracks (mobile delayed permission)
     const pollTracks=setInterval(()=>{
       const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
-      if(!slot){ clearInterval(pollTracks); return; }
+      if(!slot){clearInterval(pollTracks);return;}
       const vid=slot.querySelector('video');
-      if(vid&&vid.classList.contains('live')){ clearInterval(pollTracks); return; }
+      if(vid&&vid.classList.contains('live')){clearInterval(pollTracks);return;}
       pc.getReceivers().forEach(r=>{
-        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
-          attachTrackToSlot(pid,r.track);
-        }
+        if(r.track&&r.track.readyState==='live') attachTrackToSlot(pid,r.track);
       });
-    },800);
+    },1000);
   },50);
+
+  call.on('close',()=>console.log('call closed',pid));
+  call.on('error',e=>console.warn('call error',pid,e));
 }
 
 function handleIncomingCall(call){
   const pid=call.peer;
   connections[pid]=connections[pid]||{};
   connections[pid].call=call;
-  // answer immediately with whatever we have
-  call.answer(localStream||new MediaStream());
-  // if localStream not ready yet, replace tracks once it is
-  if(!localStream){
+
+  if(localStream){
+    call.answer(localStream);
+  } else {
+    // answer with empty stream, replace tracks when ready
+    call.answer(new MediaStream());
+    let replaceAttempts=0;
     const waitStream=setInterval(()=>{
-      if(!localStream) return;
+      replaceAttempts++;
+      if(replaceAttempts>40){clearInterval(waitStream);return;}
+      if(!localStream)return;
       clearInterval(waitStream);
       const pc=call.peerConnection;
-      if(!pc) return;
+      if(!pc)return;
+      // add all local tracks
       localStream.getTracks().forEach(t=>{
-        const sender=pc.getSenders().find(s=>!s.track||s.track.kind===t.kind);
-        if(sender) sender.replaceTrack(t).catch(()=>{});
+        const sender=pc.getSenders().find(s=>s.track&&s.track.kind===t.kind);
+        if(sender) sender.replaceTrack(t).catch(e=>console.warn('replaceTrack',e));
         else pc.addTrack(t,localStream);
       });
     },500);
@@ -878,9 +923,12 @@ function submitGuess(){
         text:`🎉 Player #${myNum} guessed correctly! (+${pts} pts)`,
         type:'correct',ts:Date.now()
       });
-      if(roundCorrectNow>=2){
-        // round over — give remaining players 1 pt each
-        const remaining=Object.keys(s.playerNums||{}).filter(p=>p!==myId&&!s.guessed?.[p]);
+      const totalPlayers=Object.keys(s.playerNums||{}).length;
+      const roundOver=roundCorrectNow>=2||(roundCorrectNow>=totalPlayers-1);
+      if(roundOver){
+        // round over — give remaining unguessed players 1 pt each
+        const alreadyGuessed={...s.guessed||{},[myId]:true};
+        const remaining=Object.keys(s.playerNums||{}).filter(p=>!alreadyGuessed[p]);
         remaining.forEach(p=>{updates[`scores/${p}`]=(s.scores?.[p]||0)+1;});
         updates['status']=s.round>=3?'game_end':'round_end';
       } else {
