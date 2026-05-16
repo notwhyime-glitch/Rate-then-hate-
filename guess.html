@@ -696,19 +696,8 @@ function setupOutgoingCall(pid){
 }
 
 function setupCallHandlers(pid,call){
-  // legacy stream event — works on some browsers
-  call.on('stream',stream=>{
-    if(stream.getVideoTracks().length>0) attachStream(pid,stream);
-    else if(stream.getAudioTracks().length>0){
-      // audio only stream — attach audio, video will come via track event
-      const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
-      if(slot){
-        let rs=slot.querySelector('video').srcObject;
-        if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();slot.querySelector('video').srcObject=rs;}
-        stream.getAudioTracks().forEach(t=>{if(!rs.getTracks().find(x=>x.id===t.id))rs.addTrack(t);});
-      }
-    }
-  });
+  // stream event — attach everything regardless of track types
+  call.on('stream',stream=>{ attachStream(pid,stream); });
 
   const waitForPc=setInterval(()=>{
     const pc=call.peerConnection; if(!pc) return;
@@ -776,28 +765,44 @@ function handleIncomingCall(call){
 }
 
 function attachTrackToSlot(pid, track){
+  if(!track||track.readyState==='ended') return;
   const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
-  if(!slot)return;
+  if(!slot) return;
   const vid=slot.querySelector('video');
-  if(!vid)return;
+  if(!vid) return;
   let rs=vid.srcObject;
   if(!rs||!(rs instanceof MediaStream)){ rs=new MediaStream(); vid.srcObject=rs; }
-  if(rs.getTracks().find(t=>t.id===track.id)) return;
+  if(rs.getTracks().find(t=>t.id===track.id)) return; // already added
   rs.addTrack(track);
-  function tryPlay(){
-    vid.play().then(()=>vid.classList.add('live')).catch(()=>setTimeout(tryPlay,300));
-  }
-  tryPlay();
+  makeVideoLive(vid);
 }
 
-function attachStream(pid,stream){
+function attachStream(pid, stream){
+  if(!stream) return;
   const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
-  if(!slot)return;
+  if(!slot) return;
   const vid=slot.querySelector('video');
-  if(!vid)return;
-  vid.srcObject=stream;
+  if(!vid) return;
+  // add each track individually so we don't lose existing tracks
+  stream.getTracks().forEach(track=>{
+    let rs=vid.srcObject;
+    if(!rs||!(rs instanceof MediaStream)){ rs=new MediaStream(); vid.srcObject=rs; }
+    if(!rs.getTracks().find(t=>t.id===track.id)) rs.addTrack(track);
+  });
+  makeVideoLive(vid);
+}
+
+function makeVideoLive(vid){
+  vid.muted=false; // ensure not muted (can block autoplay on some browsers)
   function tryPlay(){
-    vid.play().then(()=>{ vid.classList.add('live'); }).catch(()=>setTimeout(tryPlay,300));
+    if(!vid.srcObject) return;
+    const hasVideo=vid.srcObject.getVideoTracks&&vid.srcObject.getVideoTracks().length>0;
+    vid.play().then(()=>{
+      if(hasVideo) vid.classList.add('live');
+    }).catch(e=>{
+      console.warn('play failed, retrying',e);
+      setTimeout(tryPlay,400);
+    });
   }
   tryPlay();
 }
