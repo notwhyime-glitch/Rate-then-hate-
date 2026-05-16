@@ -424,6 +424,11 @@ function joinLobby(){
     const val=snap.val();
     if(val)Object.entries(val).forEach(([pid,p])=>{players[pid]=p;});
     renderLobby();
+    // if in game and only 1 player left, end the game
+    if(gameLoaded && Object.keys(players).length < 2){
+      showToast('all other players left — game over');
+      setTimeout(()=>{ window.location.href='index.html'; }, 2500);
+    }
   });
   db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
     const val=snap.val();
