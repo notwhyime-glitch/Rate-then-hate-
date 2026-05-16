@@ -75,17 +75,29 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 .char-name{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:#fff;}
 .char-cat{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
 
-/* MY CHAR PANEL — shows above chat box, blurred for self */
-#myCharPanel{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 14px;border-bottom:1px solid #1a1a1a;
-  background:#0a0a0a;flex-shrink:0;
+/* CHARS PANEL — shows all characters above chat */
+#charsPanel{
+  display:flex;gap:0;border-bottom:1px solid #1a1a1a;
+  background:#080808;flex-shrink:0;flex-wrap:wrap;
 }
-#myCharPanel .panel-img{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid #222;flex-shrink:0;}
-#myCharPanel .panel-info{display:flex;flex-direction:column;gap:2px;}
-#myCharPanel .panel-label{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-#myCharPanel .panel-name{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--green);filter:blur(6px);user-select:none;}
-#myCharPanel .panel-cat{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;filter:blur(6px);}
+.char-panel-item{
+  flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-right:1px solid #111;position:relative;
+}
+.char-panel-item:last-child{border-right:none;}
+.char-panel-item.is-mine .cpi-img,
+.char-panel-item.is-mine .cpi-info{ visibility:hidden; }
+.char-panel-item.is-mine::after{
+  content:'YOUR CHARACTER';
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;
+}
+.cpi-img{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid #222;}
+.cpi-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.cpi-label{font-size:7px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.cpi-name{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cpi-cat{font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.cpi-num{font-size:8px;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;}
 
 /* GUESSED OVERLAY */
 .cam-slot.guessed::after{content:'✓ GUESSED';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:4px;color:var(--green);background:rgba(0,0,0,.6);z-index:20;}
@@ -203,14 +215,7 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
         <div class="hud-turn" id="hudTurn">turn: <span id="hudTurnName">—</span></div>
       </div>
       <div class="scores-bar" id="scoresBar"></div>
-      <div id="myCharPanel" style="display:none;">
-        <img class="panel-img" id="myCharImg" src="" alt="">
-        <div class="panel-info">
-          <div class="panel-label">your character (hidden)</div>
-          <div class="panel-name" id="myCharName">?????</div>
-          <div class="panel-cat" id="myCharCat"></div>
-        </div>
-      </div>
+      <div id="charsPanel"></div>
       <div class="messages" id="messages"></div>
       <div class="guess-row" id="guessRow">
         <input id="guessInput" placeholder="type your guess..." autocomplete="off" onkeydown="if(event.key==='Enter')submitGuess()">
@@ -452,6 +457,46 @@ function hostStartGame(){
   });
 }
 
+/* ── CHARS PANEL ── */
+function buildCharsPanel(state){
+  const panel=$('charsPanel');
+  if(!panel)return;
+  panel.innerHTML='';
+  const sorted=Object.keys(state.playerNums||{}).sort((a,b)=>state.playerNums[a]-state.playerNums[b]);
+  sorted.forEach(pid=>{
+    const char=CHARACTERS[state.chars[pid]];
+    const isMe=pid===myId;
+    const num=state.playerNums[pid];
+
+    const item=document.createElement('div');
+    item.className='char-panel-item'+(isMe?' is-mine':'');
+
+    const img=document.createElement('img');
+    img.className='cpi-img';
+    img.src=char.image;
+    img.alt=char.name;
+    img.onerror=()=>{
+      img.style.display='none';
+      const fb=document.createElement('div');
+      fb.className='cpi-img';
+      fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;';
+      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾'};
+      fb.innerText=cats[char.category]||'?';
+      item.insertBefore(fb,item.firstChild);
+    };
+    item.appendChild(img);
+
+    const info=document.createElement('div');
+    info.className='cpi-info';
+    info.innerHTML=`
+      <div class="cpi-num">#${num}${isMe?' · you':''}</div>
+      <div class="cpi-name">${char.name}</div>
+      <div class="cpi-cat">${char.category}</div>`;
+    item.appendChild(info);
+    panel.appendChild(item);
+  });
+}
+
 /* ── LOAD GAME ── */
 async function loadGame(state){
   if(gameLoaded)return;
@@ -459,18 +504,8 @@ async function loadGame(state){
   const pids=Object.keys(players);
   myNum=state.playerNums[myId];
   myChar=CHARACTERS[state.chars[myId]];
-  // populate my char panel (blurred)
-  const panel=$('myCharPanel');
-  const panelImg=$('myCharImg');
-  const panelName=$('myCharName');
-  const panelCat=$('myCharCat');
-  if(panel&&myChar){
-    panelImg.src=myChar.image;
-    panelImg.onerror=()=>{ panelImg.style.display='none'; };
-    panelName.innerText=myChar.name;
-    panelCat.innerText=myChar.category;
-    panel.style.display='flex';
-  }
+  // build chars panel — everyone's character shown, yours hidden
+  buildCharsPanel(state);
   currentRound=state.round||1;
   currentTurnNum=state.turnNum||1;
   try{
@@ -578,74 +613,71 @@ function connectMesh(pids,state){
   sorted.forEach(pid=>{
     if(pid===myId)return;
     if(pid>myId){
-      setTimeout(()=>{
-        const stream=localStream||new MediaStream();
-        const call=peer.call(pid,stream);
-        connections[pid]=connections[pid]||{};
-        connections[pid].call=call;
-        call.on('stream',s=>{ attachStream(pid,s); });
-        // track event fallback
-        const waitForPc=setInterval(()=>{
-          const pc=call.peerConnection; if(!pc) return;
-          clearInterval(waitForPc);
-          pc.addEventListener('track',e=>{
-            if(e.track.kind==='video') attachTrackToSlot(pid, e.track);
-            if(e.streams&&e.streams[0]) attachStream(pid, e.streams[0]);
-          });
-          // poll for late video tracks
-          const pollTracks=setInterval(()=>{
-            if(!document.querySelector(`.cam-slot[data-pid="${pid}"]`)){ clearInterval(pollTracks); return; }
-            pc.getReceivers().forEach(r=>{
-              if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
-                attachTrackToSlot(pid, r.track);
-              }
-            });
-          }, 800);
-        }, 50);
-      },800);
+      // wait for localStream before calling — poll until ready
+      let attempts=0;
+      const tryCall=setInterval(()=>{
+        attempts++;
+        if(attempts>20){ clearInterval(tryCall); return; } // give up after 10s
+        if(!localStream) return;
+        clearInterval(tryCall);
+        setupOutgoingCall(pid);
+      },500);
     }
   });
 }
 
-function handleIncomingCall(call){
-  // answer even if localStream isn't ready yet — we'll add tracks when ready
-  call.answer(localStream||new MediaStream());
-  const pid=call.peer;
+function setupOutgoingCall(pid){
+  const call=peer.call(pid,localStream);
   connections[pid]=connections[pid]||{};
   connections[pid].call=call;
+  setupCallHandlers(pid,call);
+}
 
+function setupCallHandlers(pid,call){
   call.on('stream',stream=>{ attachStream(pid,stream); });
-
-  // also hook into peerConnection track event for late tracks
   const waitForPc=setInterval(()=>{
     const pc=call.peerConnection; if(!pc) return;
     clearInterval(waitForPc);
     pc.addEventListener('track',e=>{
-      if(e.track.kind==='video') attachTrackToSlot(pid, e.track);
-      if(e.streams&&e.streams[0]) attachStream(pid, e.streams[0]);
+      if(e.streams&&e.streams[0]) attachStream(pid,e.streams[0]);
+      else if(e.track&&e.track.kind==='video') attachTrackToSlot(pid,e.track);
     });
-    // poll for late video tracks (delayed camera permission on mobile)
+    // poll for late tracks (mobile delayed permission)
     const pollTracks=setInterval(()=>{
-      if(!document.querySelector(`.cam-slot[data-pid="${pid}"]`)){ clearInterval(pollTracks); return; }
+      const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
+      if(!slot){ clearInterval(pollTracks); return; }
+      const vid=slot.querySelector('video');
+      if(vid&&vid.classList.contains('live')){ clearInterval(pollTracks); return; }
       pc.getReceivers().forEach(r=>{
         if(r.track&&r.track.kind==='video'&&r.track.readyState==='live'){
-          attachTrackToSlot(pid, r.track);
+          attachTrackToSlot(pid,r.track);
         }
       });
-    }, 800);
-    // also if our localStream gets added late, replace track
-    if(!localStream){
-      const waitStream=setInterval(()=>{
-        if(!localStream){ return; }
-        clearInterval(waitStream);
-        localStream.getTracks().forEach(t=>{
-          const sender=pc.getSenders().find(s=>s.track&&s.track.kind===t.kind);
-          if(sender) sender.replaceTrack(t).catch(()=>{});
-          else pc.addTrack(t, localStream);
-        });
-      }, 500);
-    }
-  }, 50);
+    },800);
+  },50);
+}
+
+function handleIncomingCall(call){
+  const pid=call.peer;
+  connections[pid]=connections[pid]||{};
+  connections[pid].call=call;
+  // answer immediately with whatever we have
+  call.answer(localStream||new MediaStream());
+  // if localStream not ready yet, replace tracks once it is
+  if(!localStream){
+    const waitStream=setInterval(()=>{
+      if(!localStream) return;
+      clearInterval(waitStream);
+      const pc=call.peerConnection;
+      if(!pc) return;
+      localStream.getTracks().forEach(t=>{
+        const sender=pc.getSenders().find(s=>!s.track||s.track.kind===t.kind);
+        if(sender) sender.replaceTrack(t).catch(()=>{});
+        else pc.addTrack(t,localStream);
+      });
+    },500);
+  }
+  setupCallHandlers(pid,call);
 }
 
 function attachTrackToSlot(pid, track){
@@ -867,14 +899,7 @@ function hostNextRound(){
       const s2=snap2.val();
       myChar=CHARACTERS[s2.chars[myId]];
       buildCams(s2);
-      // update panel
-      const panelImg=$('myCharImg');
-      if(panelImg&&myChar){
-        panelImg.src=myChar.image;
-        $('myCharName').innerText=myChar.name;
-        $('myCharCat').innerText=myChar.category;
-        $('myCharPanel').style.display='flex';
-      }
+      buildCharsPanel(s2);
     });
   });
 }
