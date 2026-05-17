@@ -383,11 +383,18 @@ function initPeer(cb){
   peer.on('open',id=>{myId=id;if(cb)cb();});
   peer.on('error',err=>{
     console.error('peer error',err);
-    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
+    if(['network','server-error','socket-error','socket-closed','disconnected'].includes(err.type)){
+      showToast('reconnecting...');
       setTimeout(()=>initPeer(cb),2000);
+    } else if(err.type==='peer-unavailable'){
+      // ignore — stale peer ID
     } else {
-      showToast('connection error');
+      showToast('connection error: '+err.type);
     }
+  });
+  peer.on('disconnected',()=>{
+    console.log('peer disconnected from server, reconnecting...');
+    try{ peer.reconnect(); }catch(e){ setTimeout(()=>initPeer(cb),1500); }
   });
   peer.on('call',handleIncomingCall);
 }
@@ -562,7 +569,9 @@ async function loadGame(state){
   buildCams(state);
   renderScores(state);
   updateTurnUI(state);
-  connectMesh(pids,state);
+  // ensure peer is ready before meshing
+  if(myId){ connectMesh(pids,state); }
+  else { peer.on('open',()=>connectMesh(pids,state)); }
   // listen for game updates
   let lastRound=1;
   db.ref(`guess_rooms/${gameId}/state`).on('value',snap=>{
@@ -593,10 +602,11 @@ async function loadGame(state){
     }
     lastRound=Math.max(lastRound,newRound);
   });
-  // listen for chat
-  db.ref(`guess_rooms/${gameId}/chat`).on('child_added',snap=>{
+  // listen for chat — use startAt to avoid missing messages during setup
+  const chatStartTime=Date.now();
+  db.ref(`guess_rooms/${gameId}/chat`).orderByChild('ts').startAt(chatStartTime-5000).on('child_added',snap=>{
     const msg=snap.val();
-    appendMessage(msg);
+    if(msg) appendMessage(msg);
   });
 }
 
@@ -624,8 +634,8 @@ function buildCams(state){
     // video
     const vid=document.createElement('video');
     vid.autoplay=true;vid.playsinline=true;
+    vid.muted=true; // always mute video element (audio comes via separate audio track)
     if(isMe&&localStream){
-      vid.muted=true;
       vid.srcObject=localStream;
       function tryPlayLocal(){
         vid.play().then(()=>vid.classList.add('live')).catch(()=>setTimeout(tryPlayLocal,300));
@@ -793,15 +803,23 @@ function attachStream(pid, stream){
 }
 
 function makeVideoLive(vid){
-  vid.muted=false; // ensure not muted (can block autoplay on some browsers)
   function tryPlay(){
     if(!vid.srcObject) return;
     const hasVideo=vid.srcObject.getVideoTracks&&vid.srcObject.getVideoTracks().length>0;
+    // try unmuted first
+    vid.muted=false;
     vid.play().then(()=>{
       if(hasVideo) vid.classList.add('live');
-    }).catch(e=>{
-      console.warn('play failed, retrying',e);
-      setTimeout(tryPlay,400);
+    }).catch(()=>{
+      // autoplay blocked — try muted (browser policy), then unmute
+      vid.muted=true;
+      vid.play().then(()=>{
+        vid.muted=false;
+        if(hasVideo) vid.classList.add('live');
+      }).catch(e=>{
+        console.warn('play failed, retrying',e);
+        setTimeout(tryPlay,500);
+      });
     });
   }
   tryPlay();
