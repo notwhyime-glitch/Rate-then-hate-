@@ -116,7 +116,6 @@ body::before {
 #skipBtn:active  { transform: translateX(-50%) scale(.97); }
 #cancelBtn:active{ transform: translateX(-50%) scale(.97); }
 
-/* ── IMPOSTOR BUTTON ── */
 .impostor-btn {
   background: #0a0a0a !important;
   color: var(--red) !important;
@@ -125,7 +124,6 @@ body::before {
 }
 .impostor-btn:hover { background: rgba(255,45,32,0.08) !important; border-color: rgba(255,45,32,0.7) !important; }
 
-/* ── WAIT TIMER ── */
 #waitTimer {
   display: none;
   background: rgba(255,255,255,0.05);
@@ -139,7 +137,6 @@ body::before {
 }
 #waitTimer span { color: var(--green); font-weight: 500; }
 
-/* ── REPORT BUTTON ── */
 #reportBtn {
   position: fixed; top: 16px; right: 16px;
   display: none;
@@ -151,7 +148,6 @@ body::before {
 }
 #reportBtn:hover { background: rgba(255,45,32,0.18); }
 
-/* ── REPORT MODAL ── */
 #reportModal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.92);
   display: none; justify-content: center; align-items: center;
@@ -162,10 +158,7 @@ body::before {
   padding: 28px; width: 100%; max-width: 380px;
   display: flex; flex-direction: column; gap: 16px;
 }
-.report-box h2 {
-  font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem;
-  letter-spacing: 4px; color: var(--red); margin: 0;
-}
+.report-box h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 4px; color: var(--red); margin: 0; }
 .report-box p { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
 .report-reasons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .report-reason {
@@ -179,8 +172,7 @@ body::before {
 #reportDetail {
   width: 100%; height: 70px; background: #0a0a0a; border: 1px solid #1f1f1f;
   border-radius: 8px; color: #fff; font-family: 'DM Mono', monospace;
-  font-size: 11px; padding: 10px 12px; resize: vertical;
-  letter-spacing: 1px;
+  font-size: 11px; padding: 10px 12px; resize: vertical; letter-spacing: 1px;
 }
 #reportDetail::placeholder { color: #333; }
 #reportDetail:focus { outline: none; border-color: #333; }
@@ -197,7 +189,6 @@ body::before {
 }
 .report-submit-btn:hover { background: rgba(255,45,32,0.22); }
 
-/* ── RATING SCREEN ── */
 #rating-screen {
   position: fixed; inset: 0; background: rgba(0,0,0,.96);
   display: none; flex-direction: column; justify-content: center; align-items: center;
@@ -215,17 +206,14 @@ body::before {
 #countdownBar { width: 100%; max-width: 400px; height: 3px; background: #1a1a1a; border-radius: 2px; margin-top: 28px; overflow: hidden; }
 #countdownFill { height: 100%; width: 100%; background: var(--red); transition: width 1s linear; }
 
-/* ── REVEAL ── */
 #reveal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; background: #000; z-index: 9999; }
 #revealNum { font-family: 'Bebas Neue', sans-serif; font-size: 12rem; line-height: 1; color: var(--green); animation: pop .3s ease; }
 #revealLabel { font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
 @keyframes pop { 0%{transform:scale(1.4);opacity:0} 100%{transform:scale(1);opacity:1} }
 
-/* ── TOAST ── */
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 24px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #fff; z-index: 99999; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
-/* ── ONLINE COUNTER ── */
 #onlineCounter {
   position: fixed; bottom: 20px; right: 20px;
   display: flex; align-items: center; gap: 8px;
@@ -234,7 +222,6 @@ body::before {
   font-size: 10px; letter-spacing: 2px; color: var(--muted);
   text-transform: uppercase; z-index: 9980;
   backdrop-filter: blur(8px);
-  transition: opacity .3s ease;
 }
 #onlineCounter .dot {
   width: 6px; height: 6px; border-radius: 50%;
@@ -246,7 +233,6 @@ body::before {
 @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
 #onlineCount { color: #fff; font-weight: 500; }
 
-/* ── TERMS MODAL ── */
 #tosModal {
   position: fixed; inset: 0; background: rgba(0,0,0,0.97);
   display: flex; justify-content: center; align-items: center;
@@ -287,7 +273,6 @@ body::before {
 </head>
 <body>
 
-<!-- ── TERMS OF SERVICE MODAL ── -->
 <div id="tosModal">
   <div class="tos-box">
     <div class="tos-header">
@@ -296,52 +281,39 @@ body::before {
         <div class="tos-version">rathe beta · last updated may 2026</div>
       </div>
     </div>
-
     <div class="tos-scroll" id="tosScroll">
       <h3>1. Who we are</h3>
       <p>Rathe ("the service") is a random video/audio matching platform currently in public beta. By using Rathe you agree to these terms in full. If you do not agree, do not use the service.</p>
-
       <h3>2. Age requirement</h3>
       <p>You must be at least 18 years old to use Rathe. By accepting these terms you confirm you meet this requirement. We reserve the right to terminate access for any user we have reason to believe is underage.</p>
-
       <h3>3. Data we collect</h3>
       <p>Rathe collects and temporarily processes the following data to operate the service:</p>
       <p><strong style="color:#aaa">Microphone & camera:</strong> Audio and video streams are transmitted peer-to-peer directly between matched users via WebRTC. We do not record, store, or have access to your audio or video at any point.</p>
       <p><strong style="color:#aaa">Matchmaking data:</strong> A temporary anonymous peer ID is generated each session and stored in Firebase Realtime Database to facilitate matching. This ID is deleted from our lobby queue immediately after a match is made.</p>
       <p><strong style="color:#aaa">Ratings:</strong> Numerical ratings (1–10) you submit are stored in Firebase under your anonymous session ID linked to that match. Ratings are not tied to any personal identity.</p>
-      <p><strong style="color:#aaa">Signalling data:</strong> Temporary connection signals (e.g. "skip", "video-ready") are stored briefly in Firebase and automatically discarded.</p>
+      <p><strong style="color:#aaa">Signalling data:</strong> Temporary connection signals are stored briefly in Firebase and automatically discarded.</p>
       <p>We do not collect your name, email, IP address, or any personally identifiable information during normal use.</p>
-
       <h3>4. Third-party services</h3>
-      <p>Rathe uses the following third-party services to operate. Their own privacy policies apply:</p>
       <p>· <strong style="color:#aaa">Google Firebase</strong> — matchmaking & signalling database</p>
       <p>· <strong style="color:#aaa">PeerJS / Render</strong> — WebRTC peer connection brokering</p>
       <p>· <strong style="color:#aaa">Google Fonts</strong> — font delivery</p>
-
       <h3>5. Acceptable use</h3>
-      <p>You agree not to use Rathe to: share illegal content; harass, threaten, or abuse other users; expose minors to the platform; attempt to record or screenshot other users without consent; or circumvent any platform restrictions.</p>
-      <p>Violations may result in immediate termination of your session and permanent ban.</p>
-
+      <p>You agree not to use Rathe to: share illegal content; harass, threaten, or abuse other users; expose minors to the platform; attempt to record or screenshot other users without consent; or circumvent any platform restrictions. Violations may result in immediate termination of your session and permanent ban.</p>
       <h3>6. Beta disclaimer</h3>
       <p>Rathe is in active beta development. The service is provided "as is" with no guarantee of uptime, data integrity, or feature availability. We may change, pause, or shut down the service at any time without notice.</p>
-
       <h3>7. Limitation of liability</h3>
       <p>To the maximum extent permitted by law, Rathe and its operators are not liable for any damages arising from your use of the platform, including but not limited to harmful content encountered during calls.</p>
-
       <h3>8. Changes to these terms</h3>
       <p>We may update these terms at any time. Continued use of the service after changes constitutes acceptance of the revised terms.</p>
     </div>
-
     <label class="tos-agree">
       <input type="checkbox" id="tosCheck" onchange="onTosCheck()">
       I am 18 or older and I agree to the Terms of Service
     </label>
-
     <button id="tosAcceptBtn" onclick="acceptTos()">ENTER RATHE</button>
   </div>
 </div>
 
-<!-- ── REPORT MODAL ── -->
 <div id="reportModal">
   <div class="report-box">
     <h2>REPORT</h2>
@@ -424,8 +396,6 @@ body::before {
       </div>
       <p class="tagline">rate then hate.</p>
       <div id="statusLine">ready when you are</div>
-
-      <!-- MODE SELECT -->
       <div id="modeSelect" style="display:flex;flex-direction:column;gap:12px;width:100%;">
         <button id="startBtn" class="main-btn">START MATCHING</button>
         <button class="main-btn impostor-btn" onclick="window.location.href='impostor.html'">
@@ -438,7 +408,7 @@ body::before {
             IMPOSTOR
           </span>
         </button>
-        <button class="main-btn" onclick="window.location.href='guess.html'" style="margin-top:0;background:#0a0a0a;color:#ffd60a;border:1px solid rgba(255,214,10,0.4);">
+        <button class="main-btn" onclick="window.location.href='guess.html'" style="background:#0a0a0a;color:#ffd60a;border:1px solid rgba(255,214,10,0.4);">
           🎭 &nbsp;GUESS THE PERSON
         </button>
       </div>
@@ -449,14 +419,9 @@ body::before {
 
 <button id="skipBtn">SKIP / HATE</button>
 <button id="cancelBtn">CANCEL SEARCH</button>
-<audio id="remoteAudio" autoplay></audio>
 
-<div id="rating-screen">
-  <div id="ratingTitle">RATE THEM</div>
-  <div id="ratingSubtitle">you have 10 seconds</div>
-  <div class="rate-grid" id="rateGrid"></div>
-  <div id="countdownBar"><div id="countdownFill"></div></div>
-</div>
+<!-- dedicated audio element for remote peer — never muted, autoplay, outside video element -->
+<audio id="remoteAudio" autoplay playsinline></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -465,17 +430,17 @@ body::before {
 <script>
 /* ── TERMS OF SERVICE ── */
 const TOS_KEY = 'rathe_tos_v1';
-if (localStorage.getItem(TOS_KEY) === 'accepted') {
-  document.getElementById('tosModal').style.display = 'none';
+if(localStorage.getItem(TOS_KEY)==='accepted'){
+  document.getElementById('tosModal').style.display='none';
 }
-function onTosCheck() {
-  const checked = document.getElementById('tosCheck').checked;
-  document.getElementById('tosAcceptBtn').classList.toggle('ready', checked);
+function onTosCheck(){
+  const checked=document.getElementById('tosCheck').checked;
+  document.getElementById('tosAcceptBtn').classList.toggle('ready',checked);
 }
-function acceptTos() {
-  if (!document.getElementById('tosCheck').checked) return;
-  localStorage.setItem(TOS_KEY, 'accepted');
-  document.getElementById('tosModal').style.display = 'none';
+function acceptTos(){
+  if(!document.getElementById('tosCheck').checked)return;
+  localStorage.setItem(TOS_KEY,'accepted');
+  document.getElementById('tosModal').style.display='none';
 }
 
 /* ── FIREBASE ── */
@@ -488,464 +453,457 @@ firebase.initializeApp({
   messagingSenderId: "195653571803",
   appId:             "1:195653571803:web:6482704037cb0f2835e8fe"
 });
-const db = firebase.database();
-
-/* ── STALE LOBBY CLEANUP ──
-   On page load, remove any null/empty entries left behind from crashed sessions.
-   These accumulate when myId was null at the time of push and are never matched. */
-db.ref('lobby').once('value').then(snap => {
-  const entries = snap.val();
-  if (!entries) return;
-  Object.entries(entries).forEach(([k, v]) => {
-    if (!v) db.ref(`lobby/${k}`).remove();
-  });
-}).catch(() => {}); // silently ignore if offline
+const db=firebase.database();
 
 /* ── ONLINE COUNTER ── */
 function initOnlineCounter(){
-  const ref = db.ref('online/' + Math.random().toString(36).slice(2));
+  const ref=db.ref('online/'+Math.random().toString(36).slice(2));
   ref.set(true);
   ref.onDisconnect().remove();
-  db.ref('online').on('value', snap => {
-    document.getElementById('onlineCount').innerText = snap.numChildren();
+  db.ref('online').on('value',snap=>{
+    document.getElementById('onlineCount').innerText=snap.numChildren();
   });
 }
 initOnlineCounter();
 
 /* ── REPORT ── */
-function openReport()  { document.getElementById('reportModal').style.display = 'flex'; }
-function closeReport() {
-  document.getElementById('reportModal').style.display = 'none';
-  document.querySelectorAll('input[name="rr"]').forEach(r => r.checked = false);
-  document.getElementById('reportDetail').value = '';
+function openReport(){ document.getElementById('reportModal').style.display='flex'; }
+function closeReport(){
+  document.getElementById('reportModal').style.display='none';
+  document.querySelectorAll('input[name="rr"]').forEach(r=>r.checked=false);
+  document.getElementById('reportDetail').value='';
 }
-function submitReport() {
-  const reason = document.querySelector('input[name="rr"]:checked');
-  if (!reason) { showToast('pick a reason first'); return; }
+function submitReport(){
+  const reason=document.querySelector('input[name="rr"]:checked');
+  if(!reason){showToast('pick a reason first');return;}
   db.ref('reports').push({
-    reason: reason.value,
-    detail: document.getElementById('reportDetail').value.trim() || null,
-    matchId: currentMatchId || 'unknown',
-    reporterPeerId: myId || 'unknown',
-    reportedPeerId: partnerPeerId || 'unknown',
-    ts: Date.now(),
-    tsReadable: new Date().toUTCString(),
-    status: 'open'
-  }).then(() => showToast('report sent — thank you'))
-    .catch(() => showToast('failed to send — try again'));
+    reason:reason.value,
+    detail:document.getElementById('reportDetail').value.trim()||null,
+    matchId:currentMatchId||'unknown',
+    reporterPeerId:myId||'unknown',
+    reportedPeerId:partnerPeerId||'unknown',
+    ts:Date.now(),tsReadable:new Date().toUTCString(),status:'open'
+  }).then(()=>showToast('report sent — thank you'))
+    .catch(()=>showToast('failed to send — try again'));
   closeReport();
 }
 
 /* ── PEER SETUP ── */
-function createPeer() {
-  return new Peer(undefined, {
-    host: 'my-peer-server-mjl5.onrender.com', port: 443, path: '/peerjs',
-    secure: true, debug: 1,
-    config: { iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      }
+const PERM_KEY='rathe_perm_v1';
+
+// If the user has granted permission before, silently re-acquire the stream on
+// page load (browser auto-approves with no dialog). This warms up the devices
+// so clicking START MATCHING feels instant with no permission popup.
+(async()=>{
+  if(localStorage.getItem(PERM_KEY)){
+    try{
+      // Request both tracks upfront — one dialog, no second ask during video upgrade
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+    }catch(e){ localStream=null; }
+  }
+})();
+function createPeer(){
+  return new Peer(undefined,{
+    host:'my-peer-server-mjl5.onrender.com',port:443,path:'/peerjs',
+    secure:true,debug:1,
+    config:{iceServers:[
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun1.l.google.com:19302'},
+      {urls:'stun:stun2.l.google.com:19302'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
     ]}
   });
 }
 
-let peer = null;
-let myId = null, myLobbyKey = null, localStream = null, videoStream = null;
-let partnerPeerId = null, currentMatchId = null, currentCall = null, signalRef = null;
-let phase = 'idle';
-let searchInterval = null, sessionTimer = null, ratingTimer = null, waitInterval = null;
-let ratingSelected = false, ratingFired = false, sessionStarted = false;
-let myRatingVal = null, pendingVideoReady = false;
-let callRetryCount = 0;
+let peer=null;
+let myId=null, myLobbyKey=null, localStream=null, videoStream=null;
+let partnerPeerId=null, currentMatchId=null, currentCall=null, signalRef=null;
+let phase='idle';
+let searchInterval=null, sessionTimer=null, ratingTimer=null, waitInterval=null;
+let connectTimeoutId=null;   // fires if connecting takes too long
+let ratingSelected=false, ratingFired=false, sessionStarted=false;
+let myRatingVal=null, pendingVideoReady=false;
+let callRetryCount=0;
 
-const $ = id => document.getElementById(id);
-const setStatus = (msg, cls='') => { const el=$('statusLine'); el.className=cls; el.innerHTML=msg; };
-function showToast(msg, dur=3000){
-  const t=$('toast'); t.innerText=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), dur);
+const $=id=>document.getElementById(id);
+const setStatus=(msg,cls='')=>{const el=$('statusLine');el.className=cls;el.innerHTML=msg;};
+function showToast(msg,dur=3000){
+  const t=$('toast');t.innerText=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
 }
-function ratingColorClass(v){ return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue'; }
-function setReportBtn(visible){ $('reportBtn').style.display = visible ? 'block' : 'none'; }
+function ratingColorClass(v){return v<=3?'red':v<=6?'yellow':v<=9?'green':'blue';}
+function setReportBtn(visible){$('reportBtn').style.display=visible?'block':'none';}
+function setExtraButtons(visible){
+  const imp=document.querySelector('.main-btn.impostor-btn');
+  const guess=[...$('modeSelect').querySelectorAll('.main-btn')].find(b=>b.textContent.includes('GUESS'));
+  if(imp)imp.style.display=visible?'':'none';
+  if(guess)guess.style.display=visible?'':'none';
+}
 
 function stopWaitTimer(){
-  if(waitInterval){ clearInterval(waitInterval); waitInterval=null; }
+  if(waitInterval){clearInterval(waitInterval);waitInterval=null;}
   $('waitTimer').style.display='none';
 }
 
-/* ── WAIT TIMER ── */
 function startWaitTimer(){
   stopWaitTimer();
-  const el=$('waitTimer'), num=$('waitSecs');
+  const el=$('waitTimer'),num=$('waitSecs');
   el.style.display='block';
   num.innerText='calculating...';
-  // run once immediately, then poll
-  function updateEst(){
-    if(phase!=='searching'){ stopWaitTimer(); return; }
+  function update(){
+    if(phase!=='searching'){stopWaitTimer();return;}
     db.ref('lobby').once('value').then(snap=>{
-      if(phase!=='searching') return;
-      const entries = snap.val();
-      const others = entries ? Object.values(entries).filter(id=>id&&id!==myId) : [];
-      if(others.length > 0){ num.innerText='any second now'; return; }
-      const online = parseInt(document.getElementById('onlineCount').innerText)||1;
-      const inLobby = entries ? Object.keys(entries).length : 1;
-      const inSession = Math.max(0, online - inLobby);
-      if(inSession <= 0){
+      if(phase!=='searching')return;
+      const entries=snap.val();
+      const others=entries?Object.values(entries).filter(id=>id!==myId):[];
+      if(others.length>0){num.innerText='any second now';return;}
+      const online=parseInt($('onlineCount').innerText)||1;
+      const inLobby=entries?Object.keys(entries).length:1;
+      const inSession=Math.max(0,online-inLobby);
+      if(inSession<=0){
         num.innerText='waiting for someone...';
-      } else {
-        const estSecs = Math.round(120 / inSession);
-        num.innerText = estSecs <= 10 ? 'under 10s' :
-                        estSecs <= 30 ? 'under 30s' :
-                        estSecs <= 60 ? 'under 1 min' : 'a few minutes';
+      }else{
+        const est=Math.round(120/inSession);
+        num.innerText=est<=10?'under 10s':est<=30?'under 30s':est<=60?'under 1 min':'a few minutes';
       }
-    }).catch(()=>{ num.innerText='—'; });
+    }).catch(()=>{num.innerText='—';});
   }
-  updateEst();
-  waitInterval = setInterval(updateEst, 3000);
+  update();
+  waitInterval=setInterval(update,3000);
 }
 
+/* ── SAFE AUDIO PLAY ── */
+// Attaches a MediaStream (or track) to the remoteAudio element and plays it.
+// Browsers allow MediaStream audio autoplay after a user gesture, but we
+// call .play() explicitly to catch any policy-blocked cases.
+function attachAudio(streamOrTrack){
+  const audio=$('remoteAudio');
+  if(!streamOrTrack)return;
+  try{
+    const stream=streamOrTrack instanceof MediaStreamTrack
+      ? new MediaStream([streamOrTrack])
+      : streamOrTrack;
+    audio.srcObject=stream;
+    audio.play().catch(e=>console.warn('[rathe] remoteAudio.play() blocked:',e));
+  }catch(e){console.error('[rathe] attachAudio error',e);}
+}
+
+/* ── PEER INIT ── */
 function initPeer(){
-  if(peer && !peer.destroyed && myId){ return; }
-  if(peer){ try{ peer.destroy(); }catch(e){} peer=null; }
-  myId = null;
-  peer = createPeer();
-  peer.on('open', id => { myId=id; setStatus('ready when you are'); });
-  peer.on('error', err => {
-    console.error('PeerJS error', err);
+  if(peer&&!peer.destroyed&&myId)return;
+  if(peer){try{peer.destroy();}catch(e){}peer=null;}
+  myId=null;
+  peer=createPeer();
+  peer.on('open',id=>{myId=id;setStatus('ready when you are');});
+  peer.on('error',err=>{
+    console.error('[rathe] PeerJS error',err);
     if(err.type==='peer-unavailable'){
-      if(phase==='session'||phase==='video'||phase==='rating'||phase==='reveal'){
-        showToast('partner disconnected'); reset();
-      } else if(phase==='connecting'){
+      if(phase==='connecting'){
         callRetryCount++;
-        if(callRetryCount <= 5){
-          const delay = callRetryCount * 1000;
+        if(callRetryCount<=5){
+          const delay=callRetryCount*1000;
           setStatus(`connecting... (${callRetryCount}/5)`,'green');
-          setTimeout(()=>{ if(phase==='connecting'&&partnerPeerId) initiateCall(); }, delay);
-        } else {
-          showToast('could not connect — going back to search');
-          reset();
+          setTimeout(()=>{if(phase==='connecting'&&partnerPeerId)initiateCall();},delay);
+        }else{
+          showToast('could not reach partner — searching again');
+          resetToSearch();
         }
       }
-    } else if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
-      if(phase==='idle'||phase==='searching') setTimeout(initPeer, 2000);
-    } else {
-      if(phase==='idle'||phase==='searching') setTimeout(initPeer, 2000);
+      // in searching/idle: stale lobby ID — ignore
+    }else if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
+      if(phase==='idle'||phase==='searching')setTimeout(initPeer,2000);
+    }else{
+      if(phase==='idle'||phase==='searching')setTimeout(initPeer,2000);
     }
   });
-  peer.on('disconnected', ()=>{
+  peer.on('disconnected',()=>{
     if(phase==='idle'||phase==='searching'){
-      setTimeout(()=>{ try{ peer.reconnect(); }catch(e){ initPeer(); } }, 1500);
+      setTimeout(()=>{try{peer.reconnect();}catch(e){initPeer();}},1500);
     }
   });
-  peer.on('call', handleIncomingCall);
+  peer.on('call',handleIncomingCall);
 }
 initPeer();
 
-/* ── HELPER: wait for peer to be ready, with timeout ── */
-function waitForPeerId(timeoutMs = 20000){
-  return new Promise((resolve, reject) => {
-    if(myId){ resolve(myId); return; }
-    const timer = setTimeout(() => {
-      peer.off('open', onOpen);
-      reject(new Error('peer-timeout'));
-    }, timeoutMs);
-    function onOpen(id){
-      clearTimeout(timer);
-      resolve(id);
-    }
-    peer.once('open', onOpen);
-  });
-}
-
 function clearTimers(){
-  if(searchInterval){ clearInterval(searchInterval); searchInterval=null; }
-  if(sessionTimer)  { clearInterval(sessionTimer);   sessionTimer=null; }
-  if(ratingTimer)   { clearInterval(ratingTimer);    ratingTimer=null; }
+  if(searchInterval){clearInterval(searchInterval);searchInterval=null;}
+  if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null;}
+  if(ratingTimer){clearInterval(ratingTimer);ratingTimer=null;}
+  if(connectTimeoutId){clearTimeout(connectTimeoutId);connectTimeoutId=null;}
   stopWaitTimer();
 }
-function stopSignalListener(){ if(signalRef){ signalRef.off(); signalRef=null; } }
+function stopSignalListener(){if(signalRef){signalRef.off();signalRef=null;}}
 
 function listenForPartnerSignals(){
-  if(!currentMatchId||!partnerPeerId) return;
-  signalRef = db.ref(`matches/${currentMatchId}/signals/${partnerPeerId}`);
-  signalRef.on('value', snap => {
-    const val=snap.val(); if(!val) return;
-    if(val==='skip')        { showToast('they skipped you 💀'); reset(); }
-    if(val==='video-ready') { handleRemoteVideoReady(); }
+  if(!currentMatchId||!partnerPeerId)return;
+  // listen for skip/video-ready signals
+  signalRef=db.ref(`matches/${currentMatchId}/signals/${partnerPeerId}`);
+  signalRef.on('value',snap=>{
+    const val=snap.val();if(!val)return;
+    if(val==='skip'){showToast('they skipped you 💀');reset();}
+    if(val==='video-ready'){handleRemoteVideoReady();}
   });
+  // listen for WebRTC renegotiation (video upgrade)
   let negotiating=false;
-  db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value', async snap => {
-    const val=snap.val(), pc=currentCall&&currentCall.peerConnection;
-    if(!pc||!val) return;
+  db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value',async snap=>{
+    const val=snap.val(),pc=currentCall&&currentCall.peerConnection;
+    if(!pc||!val)return;
     if(val.offer){
-      if(negotiating||pc.signalingState!=='stable') return;
+      if(negotiating||pc.signalingState!=='stable')return;
       negotiating=true;
       try{
         await pc.setRemoteDescription(new RTCSessionDescription(val.offer));
         const ans=await pc.createAnswer();
         await pc.setLocalDescription(ans);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/answer`).set({sdp:ans.sdp,type:ans.type});
-      }catch(e){ console.error('offer handling',e); }
-      finally{ negotiating=false; }
+      }catch(e){console.error('[rathe] offer handling',e);}
+      finally{negotiating=false;}
     }
     if(val.answer){
-      if(pc.signalingState!=='have-local-offer') return;
-      try{ await pc.setRemoteDescription(new RTCSessionDescription(val.answer)); }
-      catch(e){ console.error('answer handling',e); }
+      if(pc.signalingState!=='have-local-offer')return;
+      try{await pc.setRemoteDescription(new RTCSessionDescription(val.answer));}
+      catch(e){console.error('[rathe] answer handling',e);}
     }
   });
 }
 
-function sendSignal(type){ if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/signals/${myId}`).set(type); }
+function sendSignal(type){
+  if(currentMatchId&&myId)db.ref(`matches/${currentMatchId}/signals/${myId}`).set(type);
+}
 
 /* ── START MATCHING ── */
-$('startBtn').onclick = async () => {
-  if(phase!=='idle') return;
-
-  // Grab mic first so the user sees the permission prompt immediately
-  try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
-  catch(e){ showToast('mic access needed!'); return; }
-
-  // Update UI to show we're working on it
+$('startBtn').onclick=async()=>{
+  if(phase!=='idle')return;
+  // Request both audio and video in one go — single permission dialog.
+  // We only SEND audio during the session phase; video track sits ready
+  // for the reveal upgrade without needing a second getUserMedia call.
+  if(!localStream||!localStream.active){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      localStorage.setItem(PERM_KEY,'1');
+    }catch(e){showToast('mic & camera access needed!');return;}
+  }
   phase='searching';
   $('startBtn').classList.add('searching');
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
-  const impBtn = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
-  if(impBtn) impBtn.style.display='none';
-  const guessBtn = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
-  if(guessBtn) guessBtn.style.display='none';
-  $('cancelBtn').style.display='block';
-
-  // ── FIX: Wait for peer ID before entering lobby ──
-  // The PeerJS server (Render free tier) cold-starts and can take 20-40s.
-  // Pushing null to the lobby means nobody can ever match with us.
-  if(!myId){
-    setStatus('waking up server...','green');
-    try{
-      await waitForPeerId(25000); // up to 25 seconds
-    } catch(e){
-      // Peer server timed out — abort search cleanly
-      showToast('server offline — try again in a moment');
-      phase='idle';
-      $('startBtn').classList.remove('searching');
-      $('startBtn').innerHTML='START MATCHING';
-      $('cancelBtn').style.display='none';
-      if(impBtn) impBtn.style.display='';
-      if(guessBtn) guessBtn.style.display='';
-      if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
-      setStatus('ready when you are','');
-      setTimeout(initPeer, 1000); // retry connecting to peer server in background
-      return;
-    }
-    if(phase!=='searching') return; // user cancelled while we were waiting
-  }
-
-  // myId is now guaranteed to be a valid string
+  setExtraButtons(false);
   setStatus('scanning the void','green');
+  $('cancelBtn').style.display='block';
   startWaitTimer();
-  const ref = db.ref('lobby').push(myId); // ✅ always a real peer ID now
-  myLobbyKey = ref.key;
-  searchInterval = setInterval(tryMatch, 2000);
+  const ref=db.ref('lobby').push(myId);
+  myLobbyKey=ref.key;
+  searchInterval=setInterval(tryMatch,2000);
 };
 
 async function tryMatch(){
-  if(phase!=='searching') return;
+  if(phase!=='searching')return;
   const snap=await db.ref('lobby').once('value');
-  const users=snap.val(); if(!users) return;
+  const users=snap.val();if(!users)return;
   for(let k of Object.keys(users)){
-    const pid=users[k]; if(!pid||pid===myId) continue;
+    const pid=users[k];if(!pid||pid===myId)continue;
     const matchId=[myId,pid].sort().join('_');
     const matchRef=db.ref(`matches/${matchId}`);
     let won=false;
-    await matchRef.transaction(cur=>{ if(cur!==null) return; won=true; return{a:myId,b:pid,status:'locked',ts:Date.now()}; });
-    if(!won) continue;
+    await matchRef.transaction(cur=>{if(cur!==null)return;won=true;return{a:myId,b:pid,status:'locked',ts:Date.now()};});
+    if(!won)continue;
+    // we won the match
     db.ref(`lobby/${k}`).remove();
-    if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
-    partnerPeerId=pid; currentMatchId=matchId; phase='connecting';
-    clearInterval(searchInterval); searchInterval=null;
+    if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+    partnerPeerId=pid;currentMatchId=matchId;phase='connecting';
+    clearInterval(searchInterval);searchInterval=null;
     callRetryCount=0;
     stopWaitTimer();
     setStatus('matched — connecting','green');
+    startConnectTimeout();
     listenForPartnerSignals();
-    if(myId > pid){
-      initiateCall();
-    }
+    // higher peer ID always calls; lower ID waits for incoming call
+    if(myId>pid)initiateCall();
     return;
   }
 }
 
+/* ── CONNECTION TIMEOUT ── */
+// If still 'connecting' after 25s, give up and reset
+function startConnectTimeout(){
+  if(connectTimeoutId)clearTimeout(connectTimeoutId);
+  connectTimeoutId=setTimeout(()=>{
+    if(phase==='connecting'){
+      console.warn('[rathe] connect timeout — resetting');
+      showToast('connection timed out — try again');
+      reset();
+    }
+  },25000);
+}
+
+/* ── INCOMING CALL (lower peer ID) ── */
 async function handleIncomingCall(call){
-  if(phase==='session'||phase==='rating'||phase==='video'){ call.close(); return; }
-  if(!localStream){
-    try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false}); }
-    catch(e){ call.close(); return; }
+  // reject calls if already in a live session
+  if(phase==='session'||phase==='rating'||phase==='video'){call.close();return;}
+  // get stream if not already (edge case: call arrived before user clicked match)
+  if(!localStream||!localStream.active){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      localStorage.setItem(PERM_KEY,'1');
+    }catch(e){call.close();return;}
   }
-  if(!partnerPeerId) partnerPeerId=call.peer;
-  if(!currentMatchId) currentMatchId=[myId,partnerPeerId].sort().join('_');
-  if(phase!=='connecting') phase='connecting';
-  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
-  clearInterval(searchInterval); searchInterval=null;
-  callRetryCount=0;
-  stopWaitTimer();
-  $('startBtn').classList.add('searching');
-  setStatus('matched — connecting','green');
-  $('cancelBtn').style.display='none';
+  // set partner info if not already set by tryMatch
+  if(!partnerPeerId)partnerPeerId=call.peer;
+  if(!currentMatchId)currentMatchId=[myId,partnerPeerId].sort().join('_');
+  if(phase!=='connecting'){
+    phase='connecting';
+    if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+    clearInterval(searchInterval);searchInterval=null;
+    callRetryCount=0;
+    stopWaitTimer();
+    $('startBtn').classList.add('searching');
+    setStatus('matched — connecting','green');
+    $('cancelBtn').style.display='none';
+    startConnectTimeout();
+  }
   call.answer(localStream);
-  if(!signalRef) listenForPartnerSignals();
+  if(!signalRef)listenForPartnerSignals();
   handleCall(call);
 }
 
 function initiateCall(){
-  if(!peer||!partnerPeerId||!localStream) return;
+  if(!peer||!partnerPeerId||!localStream)return;
   const call=peer.call(partnerPeerId,localStream);
   handleCall(call);
 }
 
-/* ── CHEER SOUND ── */
-function playCheer(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [523,659,784,1047].forEach((freq,i)=>{
-      const o=ctx.createOscillator(), g=ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value=freq; o.type='sine';
-      const t=ctx.currentTime+i*0.12;
-      g.gain.setValueAtTime(0,t);
-      g.gain.linearRampToValueAtTime(0.25,t+0.04);
-      g.gain.linearRampToValueAtTime(0,t+0.18);
-      o.start(t); o.stop(t+0.2);
-    });
-    const buf=ctx.createBuffer(1,ctx.sampleRate*0.6,ctx.sampleRate);
-    const data=buf.getChannelData(0);
-    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.5);
-    const src=ctx.createBufferSource(), filt=ctx.createBiquadFilter(), gn=ctx.createGain();
-    filt.type='bandpass'; filt.frequency.value=800; filt.Q.value=0.5;
-    src.buffer=buf; src.connect(filt); filt.connect(gn); gn.connect(ctx.destination);
-    gn.gain.value=0.18; src.start(ctx.currentTime+0.1);
-  }catch(e){}
-}
-
-/* ── HANDLE CALL ── */
+/* ── CORE CALL HANDLER ── */
 function handleCall(call){
   currentCall=call;
-  let remoteAudioAttached = false;
-  let sessionTriggered = false;
+  let remoteAudioAttached=false;
+  let sessionTriggered=false;
 
-  function attachRemoteVideo(track){
+  /* ── helpers ── */
+  function attachRemoteVideoTrack(track){
+    if(!track||track.readyState==='ended')return;
     const vid=$('remoteVideo');
     let rs=vid.srcObject;
-    if(!rs||!(rs instanceof MediaStream)){ rs=new MediaStream(); vid.srcObject=rs; }
-    if(rs.getTracks().find(t=>t.id===track.id)) return;
+    if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();vid.srcObject=rs;}
+    if(rs.getTracks().find(t=>t.id===track.id))return;
     rs.addTrack(track);
-    function tryPlay(){
-      vid.play().then(()=>{
-        vid.classList.add('live');
-        document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-      }).catch(()=>setTimeout(tryPlay,300));
-    }
-    tryPlay();
+    // play muted first (autoplay policy), then unmute
+    vid.muted=true;
+    vid.play().then(()=>{
+      vid.muted=false;
+      vid.classList.add('live');
+      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+    }).catch(()=>{
+      // if unmuted play fails, try muted and keep video going
+      vid.muted=true;
+      vid.play().then(()=>vid.classList.add('live')).catch(()=>{});
+    });
   }
 
   function tryStartSession(){
-    console.log('[rathe] tryStartSession called, phase='+phase+', sessionTriggered='+sessionTriggered+', sessionStarted='+sessionStarted);
-    if(sessionTriggered) return;
-    if(phase!=='connecting') return;
+    if(sessionTriggered)return;
+    // allow triggering from both 'connecting' state (normal) and 'searching'
+    // (edge case: incoming call arrived before tryMatch ran on this side)
+    if(phase!=='connecting'&&phase!=='searching')return;
     sessionTriggered=true;
+    if(connectTimeoutId){clearTimeout(connectTimeoutId);connectTimeoutId=null;}
     startSession();
   }
 
+  /* ── attach audio from any source ── */
+  function tryAttachAudio(streamOrTrack){
+    if(remoteAudioAttached)return;
+    remoteAudioAttached=true;
+    attachAudio(streamOrTrack);
+    tryStartSession();
+  }
+
+  /* ── RTCPeerConnection-level track handling ── */
+  // poll until peerConnection is available (set internally by PeerJS after call/answer)
   const waitForPc=setInterval(()=>{
-    const pc=call.peerConnection; if(!pc) return;
+    const pc=call.peerConnection;if(!pc)return;
     clearInterval(waitForPc);
 
-    pc.addEventListener('track', e=>{
-      console.log('[rathe] track event:', e.track.kind, e.track.readyState);
-      const stream = e.streams && e.streams[0];
+    // primary: track event — most reliable in modern browsers
+    pc.addEventListener('track',e=>{
+      const stream=e.streams&&e.streams[0];
       if(e.track.kind==='audio'){
-        if(!remoteAudioAttached && stream){
-          $('remoteAudio').srcObject=stream;
-          remoteAudioAttached=true;
-        }
-        tryStartSession();
+        // if stream is null, create one from the track directly
+        tryAttachAudio(stream||e.track);
       }
       if(e.track.kind==='video'){
-        attachRemoteVideo(e.track);
-        if(stream) stream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
+        attachRemoteVideoTrack(e.track);
+        if(stream)stream.getVideoTracks().forEach(t=>attachRemoteVideoTrack(t));
       }
     });
 
-    pc.addEventListener('iceconnectionstatechange', ()=>{
-      console.log('[rathe] ICE state:', pc.iceConnectionState);
+    // ICE state: trigger session as soon as connected even if track events missed
+    pc.addEventListener('iceconnectionstatechange',()=>{
+      console.log('[rathe] ICE state:',pc.iceConnectionState);
       if(pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed'){
+        // pull any already-received tracks from receivers
+        pc.getReceivers().forEach(r=>{
+          if(!r.track||r.track.readyState!=='live')return;
+          if(r.track.kind==='video')attachRemoteVideoTrack(r.track);
+          if(r.track.kind==='audio')tryAttachAudio(r.track);
+        });
+        // kick off session even if no track event fired (audio-only scenarios)
         tryStartSession();
       }
-      if(pc.iceConnectionState==='failed'||pc.iceConnectionState==='disconnected'){
-        if(phase==='connecting'){
-          console.log('[rathe] ICE failed, attempting restart');
-          pc.restartIce && pc.restartIce();
+      if(pc.iceConnectionState==='failed'){
+        console.warn('[rathe] ICE failed');
+        // try ICE restart before giving up
+        try{pc.restartIce&&pc.restartIce();}catch(e){}
+      }
+      if(pc.iceConnectionState==='disconnected'){
+        if(phase==='session'||phase==='video'){
+          showToast('connection dropped');reset();
         }
       }
     });
 
+    // Polling fallback — catches late tracks (mobile camera delayed permission,
+    // or tracks that arrived before our event listener was attached)
     const pollTracks=setInterval(()=>{
-      if(phase==='idle'){ clearInterval(pollTracks); return; }
+      if(phase==='idle'){clearInterval(pollTracks);return;}
+      const vid=$('remoteVideo');
+      const videoAlreadyLive=vid&&vid.classList.contains('live');
       pc.getReceivers().forEach(r=>{
-        if(r.track&&r.track.kind==='video'&&r.track.readyState==='live') attachRemoteVideo(r.track);
+        if(!r.track||r.track.readyState!=='live')return;
+        if(r.track.kind==='video'&&!videoAlreadyLive)attachRemoteVideoTrack(r.track);
+        if(r.track.kind==='audio')tryAttachAudio(r.track);
       });
-      if(!remoteAudioAttached){
-        const audioReceiver=pc.getReceivers().find(r=>r.track&&r.track.kind==='audio'&&r.track.readyState==='live');
-        if(audioReceiver){
-          const s=new MediaStream([audioReceiver.track]);
-          $('remoteAudio').srcObject=s;
-          remoteAudioAttached=true;
-          tryStartSession();
-        }
-      }
-    }, 800);
-  }, 50);
+    },1000);
+  },50);
 
-  call.on('stream', remoteStream => {
-    console.log('[rathe] stream event fired (legacy), phase='+phase+', sessionTriggered='+sessionTriggered+', sessionStarted='+sessionStarted);
-    if(!remoteAudioAttached){
-      $('remoteAudio').srcObject=remoteStream;
-      remoteAudioAttached=true;
-    }
-    remoteStream.getVideoTracks().forEach(t=>attachRemoteVideo(t));
-    tryStartSession();
+  /* ── Legacy PeerJS stream event (fallback for older PeerJS behaviour) ── */
+  call.on('stream',remoteStream=>{
+    console.log('[rathe] stream event fired');
+    // audio: attach the whole stream (contains audio track)
+    tryAttachAudio(remoteStream);
+    // video: pull individual tracks in case stream has both
+    remoteStream.getVideoTracks().forEach(t=>attachRemoteVideoTrack(t));
   });
 
-  call.on('close', ()=>{
-    if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
+  call.on('close',()=>{
+    if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video')return;
+    showToast('call ended');
     reset();
   });
-  call.on('error', err=>{
-    console.warn('[rathe] call error', err);
-    if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video') return;
+  call.on('error',err=>{
+    console.warn('[rathe] call error',err);
+    if(phase==='idle'||phase==='rating'||phase==='reveal'||phase==='video')return;
     reset();
   });
 }
 
-/* ── SESSION ── */
+/* ── SESSION START ── */
 function startSession(){
-  if(sessionStarted) return;
+  if(sessionStarted)return;
   sessionStarted=true;
   phase='session';
-  $('startBtn').classList.remove('searching'); $('startBtn').style.display='none';
-  $('timer').style.display='block'; $('skipBtn').style.display='block';
+  $('startBtn').classList.remove('searching');$('startBtn').style.display='none';
+  $('timer').style.display='block';$('skipBtn').style.display='block';
   setStatus('audio call — live','green');
   $('videoSide').classList.add('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.add('visible'));
@@ -954,44 +912,44 @@ function startSession(){
   let end=Date.now()+120_000;
   function tick(){
     const r=end-Date.now();
-    if(r<=0){ clearInterval(sessionTimer); sessionTimer=null; showRating(); return; }
+    if(r<=0){clearInterval(sessionTimer);sessionTimer=null;showRating();return;}
     const s=Math.floor(r/1000);
     $('timer').innerText=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
   }
-  tick(); sessionTimer=setInterval(tick,250);
+  tick();sessionTimer=setInterval(tick,250);
 }
 
 function showRating(){
-  if(ratingFired) return; ratingFired=true; phase='rating';
-  $('skipBtn').style.display='none'; $('cancelBtn').style.display='none'; $('timer').style.display='none';
+  if(ratingFired)return;ratingFired=true;phase='rating';
+  $('skipBtn').style.display='none';$('cancelBtn').style.display='none';$('timer').style.display='none';
   setReportBtn(false);
   const screen=$('rating-screen'),grid=$('rateGrid'),title=$('ratingTitle'),fill=$('countdownFill');
-  screen.style.display='flex'; grid.innerHTML=''; ratingSelected=false;
+  screen.style.display='flex';grid.innerHTML='';ratingSelected=false;
   for(let i=1;i<=10;i++){
     const b=document.createElement('button');
     b.className='rate-btn r-'+ratingColorClass(i);
-    b.innerText=i; b.onclick=()=>finishRating(i);
+    b.innerText=i;b.onclick=()=>finishRating(i);
     grid.appendChild(b);
   }
   fill.style.width='100%';
-  setTimeout(()=>{ fill.style.width='0%'; },50);
-  let countdown=10; title.innerText=`RATE THEM (${countdown})`;
+  setTimeout(()=>{fill.style.width='0%';},50);
+  let countdown=10;title.innerText=`RATE THEM (${countdown})`;
   ratingTimer=setInterval(()=>{
-    if(ratingSelected) return;
-    countdown--; if(countdown<=0){ finishRating(5); return; }
+    if(ratingSelected)return;
+    countdown--;if(countdown<=0){finishRating(5);return;}
     title.innerText=`RATE THEM (${countdown})`;
   },1000);
 }
 
 function finishRating(val){
-  if(phase!=='rating'||ratingSelected) return;
-  ratingSelected=true; clearTimers();
+  if(phase!=='rating'||ratingSelected)return;
+  ratingSelected=true;clearTimers();
   myRatingVal=val;
-  showRatingBadge('remoteRating', val);
+  showRatingBadge('remoteRating',val);
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
   db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
-    const v=snap.val(); if(!v) return;
-    showRatingBadge('myRating', v);
+    const v=snap.val();if(!v)return;
+    showRatingBadge('myRating',v);
   });
   $('rating-screen').style.display='none';
   phase='reveal';
@@ -999,141 +957,217 @@ function finishRating(val){
 }
 
 function showRatingBadge(id,val){
-  const el=$(id); if(!el) return;
-  el.innerText=val; el.className='rating-badge '+ratingColorClass(val);
+  const el=$(id);if(!el)return;
+  el.innerText=val;el.className='rating-badge '+ratingColorClass(val);
   el.style.display='block';
   setTimeout(()=>el.classList.add('show'),50);
-  if(id==='myRating'&&val===10) setTimeout(playCheer,400);
+  if(id==='myRating'&&val===10)setTimeout(playCheer,400);
 }
 
 function startRevealCountdown(){
   const overlay=$('reveal'),numEl=$('revealNum');
-  overlay.style.display='flex'; let count=3; numEl.innerText=count;
+  overlay.style.display='flex';let count=3;numEl.innerText=count;
   setStatus('video reveal incoming','red');
   const tick=setInterval(()=>{
     count--;
-    if(count<=0){ clearInterval(tick); overlay.style.display='none'; upgradeToVideo(); return; }
+    if(count<=0){clearInterval(tick);overlay.style.display='none';upgradeToVideo();return;}
     numEl.innerText=count;
-    numEl.style.animation='none'; void numEl.offsetWidth; numEl.style.animation='pop .3s ease';
+    numEl.style.animation='none';void numEl.offsetWidth;numEl.style.animation='pop .3s ease';
   },1000);
 }
 
+/* ── VIDEO UPGRADE ── */
 async function upgradeToVideo(){
-  if(phase==='video') return;
+  if(phase==='video')return;
   phase='video';
   pendingVideoReady=false;
   setStatus('enabling camera...','green');
-  try{
-    videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-  }catch(e){
-    showToast('camera access denied — staying audio only');
-    setStatus('audio only mode','green');
-    sendSignal('video-ready');
-    $('skipBtn').style.display='block';
-    setReportBtn(true);
-    return;
+
+  // Re-use the stream we already got upfront (audio+video).
+  // Only fall back to a new getUserMedia if the stream is gone (e.g. tab was backgrounded).
+  if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
+    try{
+      videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+    }catch(e){
+      showToast('camera access denied — staying audio only');
+      setStatus('audio only mode','green');
+      sendSignal('video-ready');
+      $('skipBtn').style.display='block';
+      setReportBtn(true);
+      return;
+    }
+  }else{
+    // Already have the stream — use it directly, no second dialog
+    videoStream=localStream;
   }
   $('localVideo').srcObject=videoStream;
-  $('localVideo').classList.add('live');
+  // local video is muted to prevent echo — just play it
+  $('localVideo').muted=true;
+  $('localVideo').play().then(()=>$('localVideo').classList.add('live')).catch(()=>{});
   $('videoSide').classList.add('active');
   setReportBtn(true);
 
   const pc=currentCall&&currentCall.peerConnection;
-  if(!pc){ sendSignal('video-ready'); setStatus('video call — live','green'); $('skipBtn').style.display='block'; return; }
+  if(!pc){
+    sendSignal('video-ready');
+    setStatus('video call — live','green');
+    $('skipBtn').style.display='block';
+    return;
+  }
 
+  // swap audio track
   const videoTrack=videoStream.getVideoTracks()[0];
   const audioTrack=videoStream.getAudioTracks()[0];
   const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
-  if(audioSender&&audioTrack) await audioSender.replaceTrack(audioTrack);
+  if(audioSender&&audioTrack){
+    await audioSender.replaceTrack(audioTrack).catch(e=>console.warn('[rathe] replaceTrack audio',e));
+  }
 
+  // renegotiate to add video — only lower peer ID sends offer to avoid collision
   if(myId<partnerPeerId){
     let offerPending=false;
     pc.onnegotiationneeded=async()=>{
-      if(offerPending||pc.signalingState!=='stable') return;
+      if(offerPending||pc.signalingState!=='stable')return;
       offerPending=true;
       try{
         const offer=await pc.createOffer();
-        if(pc.signalingState!=='stable'){ offerPending=false; return; }
+        if(pc.signalingState!=='stable'){offerPending=false;return;}
         await pc.setLocalDescription(offer);
         db.ref(`matches/${currentMatchId}/webrtc/${myId}/offer`).set({sdp:offer.sdp,type:offer.type});
-      }catch(e){ console.error('offer error',e); }
-      finally{ offerPending=false; }
+      }catch(e){console.error('[rathe] offer error',e);}
+      finally{offerPending=false;}
     };
   }
+
   const existingSender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
-  if(existingSender) await existingSender.replaceTrack(videoTrack);
-  else               pc.addTrack(videoTrack,videoStream);
+  if(existingSender){
+    await existingSender.replaceTrack(videoTrack).catch(e=>console.warn('[rathe] replaceTrack video',e));
+  }else{
+    pc.addTrack(videoTrack,videoStream);
+  }
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
   $('skipBtn').style.display='block';
 }
 
+/* ── DISCONNECT WATCH ── */
 function watchForDisconnect(){
-  if(!currentMatchId||!partnerPeerId) return;
+  if(!currentMatchId||!partnerPeerId)return;
   db.ref(`matches/${currentMatchId}/presence/${myId}`).set(true);
   db.ref(`matches/${currentMatchId}/presence/${myId}`).onDisconnect().remove();
-  let presenceReady = false;
-  setTimeout(()=>{ presenceReady = true; }, 4000);
-  db.ref(`matches/${currentMatchId}/presence/${partnerPeerId}`).on('value', snap=>{
-    if(!presenceReady) return;
+  let presenceReady=false;
+  setTimeout(()=>{presenceReady=true;},4000);
+  db.ref(`matches/${currentMatchId}/presence/${partnerPeerId}`).on('value',snap=>{
+    if(!presenceReady)return;
     if(snap.val()===null&&(phase==='video'||phase==='session')){
-      showToast('they disconnected'); reset();
+      showToast('they disconnected');reset();
     }
   });
 }
 
 function handleRemoteVideoReady(){
-  if(phase==='rating'||phase==='reveal'){ pendingVideoReady=true; return; }
-  if(phase==='session'||phase==='video') upgradeToVideo();
+  if(phase==='rating'||phase==='reveal'){pendingVideoReady=true;return;}
+  if(phase==='session'||phase==='video')upgradeToVideo();
 }
 
-$('skipBtn').onclick   = ()=>{ sendSignal('skip'); reset(); };
-$('cancelBtn').onclick = ()=>{
+/* ── CHEER SOUND ── */
+function playCheer(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [523,659,784,1047].forEach((freq,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=freq;o.type='sine';
+      const t=ctx.currentTime+i*0.12;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(0.25,t+0.04);
+      g.gain.linearRampToValueAtTime(0,t+0.18);
+      o.start(t);o.stop(t+0.2);
+    });
+    const buf=ctx.createBuffer(1,ctx.sampleRate*0.6,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.5);
+    const src=ctx.createBufferSource(),filt=ctx.createBiquadFilter(),gn=ctx.createGain();
+    filt.type='bandpass';filt.frequency.value=800;filt.Q.value=0.5;
+    src.buffer=buf;src.connect(filt);filt.connect(gn);gn.connect(ctx.destination);
+    gn.gain.value=0.18;src.start(ctx.currentTime+0.1);
+  }catch(e){}
+}
+
+/* ── CONTROLS ── */
+$('skipBtn').onclick=()=>{sendSignal('skip');reset();};
+
+$('cancelBtn').onclick=()=>{
   clearTimers();
-  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
-  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   phase='idle';
-  $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
-  $('startBtn').innerHTML='START MATCHING'; $('cancelBtn').style.display='none';
-  const impBtn2 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
-  if(impBtn2) impBtn2.style.display='';
-  const gBtn2 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
-  if(gBtn2) gBtn2.style.display='';
+  $('startBtn').classList.remove('searching');$('startBtn').style.display='block';
+  $('startBtn').innerHTML='START MATCHING';$('cancelBtn').style.display='none';
+  setExtraButtons(true);
   setReportBtn(false);
   setStatus('ready when you are','');
 };
 
+/* ── RESET (full cleanup after a session ends) ── */
 function reset(){
-  clearTimers(); stopSignalListener();
-  if(currentCall){ try{ currentCall.close(); }catch(e){} currentCall=null; }
-  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
-  if(videoStream){ videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
-  if(myLobbyKey){ db.ref(`lobby/${myLobbyKey}`).remove(); myLobbyKey=null; }
-  if(currentMatchId&&myId) db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
-  phase='idle'; partnerPeerId=null; currentMatchId=null;
-  ratingFired=false; ratingSelected=false; pendingVideoReady=false; sessionStarted=false; callRetryCount=0;
-  $('startBtn').classList.remove('searching'); $('startBtn').style.display='block';
+  clearTimers();stopSignalListener();
+  if(currentCall){try{currentCall.close();}catch(e){}currentCall=null;}
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+  if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
+  if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
+  if(currentMatchId&&myId)db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
+  phase='idle';partnerPeerId=null;currentMatchId=null;
+  ratingFired=false;ratingSelected=false;pendingVideoReady=false;sessionStarted=false;callRetryCount=0;
+  $('startBtn').classList.remove('searching');$('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING';
-  const impBtn3 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('IMPOSTOR'));
-  if(impBtn3) impBtn3.style.display='';
-  const gBtn3 = [...document.querySelectorAll('.main-btn')].find(b=>b.innerText.includes('GUESS'));
-  if(gBtn3) gBtn3.style.display='';
-  $('timer').style.display='none'; $('timer').innerText='02:00';
-  $('skipBtn').style.display='none'; $('cancelBtn').style.display='none';
-  $('rating-screen').style.display='none'; $('reveal').style.display='none';
+  setExtraButtons(true);
+  $('timer').style.display='none';$('timer').innerText='02:00';
+  $('skipBtn').style.display='none';$('cancelBtn').style.display='none';
+  $('rating-screen').style.display='none';$('reveal').style.display='none';
   $('videoSide').classList.remove('active');
   document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-  $('remoteAudio').srcObject=null;
-  $('remoteVideo').srcObject=null; $('remoteVideo').classList.remove('live');
-  $('localVideo').srcObject=null;  $('localVideo').classList.remove('live');
-  ['remoteRating','myRating'].forEach(id=>{ const el=$(id); if(el){ el.style.display='none'; el.className='rating-badge'; } });
+  // clear remote audio
+  const audio=$('remoteAudio');
+  audio.srcObject=null;
+  // clear videos
+  $('remoteVideo').srcObject=null;$('remoteVideo').classList.remove('live');
+  $('localVideo').srcObject=null;$('localVideo').classList.remove('live');
+  ['remoteRating','myRating'].forEach(id=>{
+    const el=$(id);if(el){el.style.display='none';el.className='rating-badge';}
+  });
   myRatingVal=null;
   setReportBtn(false);
   setStatus('ready when you are','');
-  if(!peer || peer.destroyed || peer.disconnected){
-    setTimeout(initPeer, 300);
-  }
+  // only reinit peer if unhealthy — preserve a working connection
+  if(!peer||peer.destroyed||peer.disconnected){setTimeout(initPeer,300);}
+}
+
+/* ── RESET TO SEARCH (partner unreachable, go back to searching) ── */
+function resetToSearch(){
+  reset();
+  // automatically re-enter search after a brief pause
+  setTimeout(async()=>{
+    if(phase!=='idle')return;
+    // reuse existing stream if still alive, otherwise re-acquire both tracks
+    if(!localStream||!localStream.active){
+      try{
+        localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+        localStorage.setItem(PERM_KEY,'1');
+      }catch(e){return;}
+    }
+    phase='searching';
+    $('startBtn').classList.add('searching');
+    $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
+    setExtraButtons(false);
+    setStatus('scanning the void','green');
+    $('cancelBtn').style.display='block';
+    startWaitTimer();
+    const ref=db.ref('lobby').push(myId);
+    myLobbyKey=ref.key;
+    searchInterval=setInterval(tryMatch,2000);
+  },1500);
 }
 </script>
 </body>
