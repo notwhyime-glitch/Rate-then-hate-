@@ -368,12 +368,13 @@ function createPeer(){
 let peer=null, myId=null;
 let gameId=null, isHost=false;
 let localStream=null;
-let players={};       // pid -> { peerId, num, charIndex, score, guessed }
+let players={};         // pid -> { peerId, num, charIndex, score, guessed }
 let myNum=null;
 let myChar=null;
 let currentTurnNum=1;
 let currentRound=1;
-let connections={};   // pid -> {call}
+let connections={};     // pid -> {call}
+let remoteStreams={};   // pid -> MediaStream — survives buildCams DOM rebuilds
 let gameLoaded=false;
 
 const $=id=>document.getElementById(id);
@@ -382,7 +383,32 @@ function showToast(msg,dur=3000){const t=$('gtoast');t.innerText=msg;t.classList
 function showLoading(label='creating room...'){$('loadingLabel').innerText=label;$('loadingOverlay').classList.add('active');}
 function hideLoading(){$('loadingOverlay').classList.remove('active');}
 
-/* ── PEER INIT ── */
+const PERM_KEY='rathe_guess_perm_v1';
+
+// Proactively re-acquire stream on page load if permission was previously granted.
+// If the browser remembers permission this is instant and silent (no dialog).
+// If not, it fails quietly — we'll ask again when the user clicks CREATE/JOIN.
+(async()=>{
+  if(localStorage.getItem(PERM_KEY)){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+    }catch(e){ localStream=null; }
+  }
+})();
+
+// Called before entering the lobby — ensures we have both audio and video.
+async function ensureStream(){
+  if(localStream&&localStream.active)return true;
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+    localStorage.setItem(PERM_KEY,'1');
+    return true;
+  }catch(e){
+    hideLoading();
+    showToast('camera & mic access required');
+    return false;
+  }
+}/* ── PEER INIT ── */
 function initPeer(cb){
   if(peer&&!peer.destroyed&&myId){if(cb)cb();return;}
   if(peer){try{peer.destroy();}catch(e){}peer=null;myId=null;}
@@ -410,6 +436,7 @@ function initPeer(cb){
 function startCreate(){
   showLoading('connecting...');
   initPeer(async()=>{
+    if(!await ensureStream())return;
     const code=Math.random().toString(36).slice(2,8).toUpperCase();
     gameId='guess_'+code;
     isHost=true;
@@ -436,6 +463,7 @@ function joinRoom(){
   isHost=false;
   showLoading('joining...');
   initPeer(async()=>{
+    if(!await ensureStream())return;
     try{
       const snap=await db.ref(`guess_rooms/${gameId}`).once('value');
       if(!snap.val()){hideLoading();showToast('room not found');return;}
@@ -515,6 +543,8 @@ function hostStartGame(){
     chars[pid]=charPool[i];
     scores[pid]=0;
   });
+  // Clear any leftover chat before game starts
+  db.ref(`guess_rooms/${gameId}/chat`).remove();
   db.ref(`guess_rooms/${gameId}/state`).set({
     status:'started',round:1,turnNum:1,
     playerNums:nums,chars,scores,guessed:{},roundCorrect:0
@@ -567,9 +597,11 @@ async function loadGame(state){
   buildCharsPanel(state);
   currentRound=state.round||1;
   currentTurnNum=state.turnNum||1;
-  try{
-    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-  }catch(e){showToast('camera/mic needed');}
+  // localStream already acquired in startCreate/joinRoom — no second dialog
+  if(!localStream||!localStream.active){
+    try{ localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true}); }
+    catch(e){ showToast('camera/mic needed'); }
+  }
   showScreen('gameScreen');
   buildCams(state);
   renderScores(state);
@@ -601,12 +633,19 @@ async function loadGame(state){
       $('messages').innerHTML='';
       buildCams(s);
       buildCharsPanel(s);
+      // Re-attach all existing peer streams to the freshly rebuilt video elements.
+      // buildCams wipes the DOM so new <video> elements are blank — we pull live
+      // tracks directly from each PeerConnection's receivers and re-attach them.
+      reattachStreams();
     }
     lastRound=Math.max(lastRound,s.round||1);
   });
 
-  const chatStartTime=Date.now();
-  db.ref(`guess_rooms/${gameId}/chat`).orderByChild('ts').startAt(chatStartTime-5000).on('child_added',snap=>{
+  // Plain child_added — no startAt/orderByChild.
+  // startAt(Date.now()) breaks when clients have different system clocks:
+  // a client whose clock is slightly ahead filters out messages from others.
+  // We clear chat in hostStartGame so no stale messages bleed across games.
+  db.ref(`guess_rooms/${gameId}/chat`).on('child_added',snap=>{
     const msg=snap.val();
     if(msg)appendMessage(msg);
   });
@@ -666,6 +705,32 @@ function buildCams(state){
     card.appendChild(info);
     slot.appendChild(card);
     area.appendChild(slot);
+  });
+}
+
+/* ── RE-ATTACH STREAMS AFTER DOM REBUILD ── */
+// After buildCams() rebuilds all <video> elements, the live peer tracks still exist
+// inside each RTCPeerConnection. We pull them from getReceivers() and re-attach.
+function reattachStreams(){
+  // Re-attach local stream to the rebuilt local slot
+  if(localStream&&localStream.active){
+    const myVid=document.querySelector(`.cam-slot[data-pid="${myId}"] video`);
+    if(myVid){myVid.srcObject=localStream;playVideo(myVid,true);}
+  }
+  // Re-attach remote streams from live RTCPeerConnection receivers
+  Object.entries(connections).forEach(([pid,conn])=>{
+    if(!conn.call)return;
+    const pc=conn.call.peerConnection;
+    if(!pc)return;
+    const liveTracks=pc.getReceivers()
+      .map(r=>r.track)
+      .filter(t=>t&&t.readyState==='live');
+    if(liveTracks.length){
+      liveTracks.forEach(t=>attachTrackToSlot(pid,t));
+    }else if(remoteStreams[pid]){
+      // Fallback: use cached stream if receivers aren't populated yet
+      attachStream(pid,remoteStreams[pid]);
+    }
   });
 }
 
@@ -756,6 +821,12 @@ function setupCallHandlers(pid,call){
 
 function handleIncomingCall(call){
   const pid=call.peer;
+  // Reject duplicate calls — one active call per peer is enough
+  if(connections[pid]&&connections[pid].call){
+    console.log('duplicate call from',pid,'— closing');
+    call.close();
+    return;
+  }
   connections[pid]=connections[pid]||{};
   connections[pid].call=call;
   if(localStream){
@@ -796,6 +867,7 @@ function attachTrackToSlot(pid,track){
 
 function attachStream(pid,stream){
   if(!stream)return;
+  remoteStreams[pid]=stream; // cache for round re-attachment
   const slot=document.querySelector(`.cam-slot[data-pid="${pid}"]`);
   if(!slot)return;
   const vid=slot.querySelector('video');
