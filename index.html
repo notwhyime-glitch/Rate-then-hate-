@@ -344,6 +344,7 @@ body::before {
   <div class="dot"></div>
   <span id="onlineCount">0</span>&nbsp;online
 </div>
+<div id="ratingStats" style="display:none;position:fixed;bottom:56px;right:20px;align-items:center;gap:6px;background:rgba(0,0,0,0.6);border:1px solid #1f1f1f;border-radius:20px;padding:6px 14px;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;z-index:9980;backdrop-filter:blur(8px);"></div>
 
 <div class="app-wrapper">
   <div class="video-side" id="videoSide">
@@ -465,6 +466,7 @@ function initOnlineCounter(){
   });
 }
 initOnlineCounter();
+renderRatingStats(); // show accumulated rating stats from previous sessions
 
 /* ── REPORT ── */
 function openReport(){ document.getElementById('reportModal').style.display='flex'; }
@@ -491,13 +493,13 @@ function submitReport(){
 /* ── PEER SETUP ── */
 const PERM_KEY='rathe_perm_v1';
 
-// If the user has granted permission before, silently re-acquire the stream on
-// page load (browser auto-approves with no dialog). This warms up the devices
-// so clicking START MATCHING feels instant with no permission popup.
+// Request both audio+video upfront on page load if permission previously granted.
+// This means one dialog total — video track is held locally and only sent
+// after the rating screen (the "reveal"). If permission not yet granted,
+// we ask on the first START MATCHING click.
 (async()=>{
   if(localStorage.getItem(PERM_KEY)){
     try{
-      // Request both tracks upfront — one dialog, no second ask during video upgrade
       localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
     }catch(e){ localStream=null; }
   }
@@ -522,10 +524,37 @@ let myId=null, myLobbyKey=null, localStream=null, videoStream=null;
 let partnerPeerId=null, currentMatchId=null, currentCall=null, signalRef=null;
 let phase='idle';
 let searchInterval=null, sessionTimer=null, ratingTimer=null, waitInterval=null;
-let connectTimeoutId=null;   // fires if connecting takes too long
+let connectTimeoutId=null;
 let ratingSelected=false, ratingFired=false, sessionStarted=false;
 let myRatingVal=null, pendingVideoReady=false;
 let callRetryCount=0;
+
+// Ratings accumulation — persists across sessions in localStorage
+const RATINGS_STORE='rathe_ratings_v2';
+function saveReceivedRating(val){
+  const arr=JSON.parse(localStorage.getItem(RATINGS_STORE)||'[]');
+  arr.push(val);
+  localStorage.setItem(RATINGS_STORE,JSON.stringify(arr));
+  renderRatingStats();
+}
+function renderRatingStats(){
+  const arr=JSON.parse(localStorage.getItem(RATINGS_STORE)||'[]');
+  const el=$('ratingStats');if(!el)return;
+  if(!arr.length){el.style.display='none';return;}
+  const avg=(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1);
+  el.style.display='flex';
+  el.innerHTML=`<span style="color:#555">avg rating</span>&nbsp;<span style="color:#fff;font-weight:500">${avg}</span>&nbsp;<span style="color:#333">/ ${arr.length} calls</span>`;
+}
+
+// Returns an audio-only MediaStream from localStream.
+// The video track stays in localStream for later use in upgradeToVideo —
+// we just don't SEND it until after the rating screen.
+function getAudioOnlyStream(){
+  if(!localStream)return null;
+  const audio=localStream.getAudioTracks();
+  if(!audio.length)return localStream;
+  return new MediaStream(audio);
+}
 
 const $=id=>document.getElementById(id);
 const setStatus=(msg,cls='')=>{const el=$('statusLine');el.className=cls;el.innerHTML=msg;};
@@ -676,9 +705,8 @@ function sendSignal(type){
 /* ── START MATCHING ── */
 $('startBtn').onclick=async()=>{
   if(phase!=='idle')return;
-  // Request both audio and video in one go — single permission dialog.
-  // We only SEND audio during the session phase; video track sits ready
-  // for the reveal upgrade without needing a second getUserMedia call.
+  // One dialog for both tracks. Video track sits idle until the reveal —
+  // only audio is sent during the initial 2-min session.
   if(!localStream||!localStream.active){
     try{
       localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
@@ -762,14 +790,16 @@ async function handleIncomingCall(call){
     $('cancelBtn').style.display='none';
     startConnectTimeout();
   }
-  call.answer(localStream);
+  // Answer with audio-only — video added after rating screen
+  call.answer(getAudioOnlyStream());
   if(!signalRef)listenForPartnerSignals();
   handleCall(call);
 }
 
 function initiateCall(){
   if(!peer||!partnerPeerId||!localStream)return;
-  const call=peer.call(partnerPeerId,localStream);
+  // Send audio-only — video added after rating via upgradeToVideo
+  const call=peer.call(partnerPeerId,getAudioOnlyStream());
   handleCall(call);
 }
 
@@ -950,6 +980,8 @@ function finishRating(val){
   db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
     const v=snap.val();if(!v)return;
     showRatingBadge('myRating',v);
+    // Accumulate the rating they gave us across all sessions
+    saveReceivedRating(v);
   });
   $('rating-screen').style.display='none';
   phase='reveal';
@@ -983,11 +1015,15 @@ async function upgradeToVideo(){
   pendingVideoReady=false;
   setStatus('enabling camera...','green');
 
-  // Re-use the stream we already got upfront (audio+video).
-  // Only fall back to a new getUserMedia if the stream is gone (e.g. tab was backgrounded).
-  if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
+  // localStream already has a video track from the upfront permission request.
+  // We just didn't SEND it during the audio-only session phase.
+  // Only fall back to a new getUserMedia if the stream was somehow lost.
+  if(localStream&&localStream.active&&localStream.getVideoTracks().length){
+    videoStream=localStream; // reuse — no second dialog
+  }else{
     try{
       videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      localStorage.setItem(PERM_KEY,'1');
     }catch(e){
       showToast('camera access denied — staying audio only');
       setStatus('audio only mode','green');
@@ -996,9 +1032,6 @@ async function upgradeToVideo(){
       setReportBtn(true);
       return;
     }
-  }else{
-    // Already have the stream — use it directly, no second dialog
-    videoStream=localStream;
   }
   $('localVideo').srcObject=videoStream;
   // local video is muted to prevent echo — just play it
