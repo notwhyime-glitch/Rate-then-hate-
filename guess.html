@@ -314,6 +314,7 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 <script>
 /* ── DATASET ── */
 const CHARACTERS = [
+  /* ── ANIME ── */
   {name:"Goku",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/0/04/Goku_Dragon_Ball_Z.png"},
   {name:"Naruto Uzumaki",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/94/NarutoCoverTankobon1.jpg"},
   {name:"Monkey D. Luffy",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png"},
@@ -323,18 +324,54 @@ const CHARACTERS = [
   {name:"Gojo Satoru",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9a/Satoru_Gojo.png"},
   {name:"Eren Yeager",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9b/Eren_Yeager.png"},
   {name:"Tanjiro Kamado",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/7/74/Tanjiro_Kamado.png"},
+  /* ── CARTOON ── */
+  {name:"Rick Sanchez",category:"cartoon",image:"https://upload.wikimedia.org/wikipedia/en/c/c9/Rick_Sanchez.png"},
+  {name:"Morty Smith",category:"cartoon",image:"https://upload.wikimedia.org/wikipedia/en/0/03/Morty_Smith.png"},
+  /* ── TV / STREAMING ── */
+  {name:"Homelander",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/a/a2/Homelander.png"},
+  {name:"Billy Butcher",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/6/6a/Billy_Butcher.png"},
+  {name:"Soldier Boy",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/1/1c/Soldier_Boy_The_Boys.png"},
+  {name:"Omni-Man",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/8/80/Omni-Man.png"},
+  {name:"Invincible",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/a/a0/Invincible_Mark_Grayson.png"},
+  {name:"Dexter Morgan",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/c/c6/Dexter_Morgan_character.jpg"},
+  /* ── SUPERHERO ── */
+  {name:"Superman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/e/ea/SupermanRoss.png"},
+  {name:"Batman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/d/d6/Batman_DC_Comics.jpg"},
+  {name:"Hulk",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/5/59/Hulk_%28comics_character%29.jpg"},
+  {name:"Thor",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/1/10/Thor_Odinson.jpg"},
+  {name:"Captain America",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/3/35/Captain_America_Vol_7_1_Textless.jpg"},
+  {name:"Spider-Man",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/2/21/Web_of_Spider-Man_Vol_1_129-1.png"},
+  {name:"Venom",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/7/76/Venom_first_appearance.jpg"},
+  {name:"Green Arrow",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/b/bf/GreenArrow.png"},
+  {name:"Deadpool",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/a/a6/Deadpool_character.png"},
+  /* ── FICTIONAL ── */
+  {name:"Harry Potter",category:"fictional",image:"https://upload.wikimedia.org/wikipedia/en/d/d7/Harry_Potter_character_banner.jpg"},
+  {name:"Peter Pan",category:"fictional",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Peter_Pan_1915_silhouette.png"},
+  /* ── RAPPERS ── */
   {name:"Drake",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/bd/Drake_July_2016.jpg"},
   {name:"Kendrick Lamar",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/6/61/Kendrick_Lamar_2018_Pulitzer_Prize.jpg"},
   {name:"Eminem",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/b5/Eminem_2021.jpg"},
   {name:"Travis Scott",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/2/28/Travis_Scott_2019_by_Glenn_Francis.jpg"},
   {name:"Kanye West",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Kanye_West_at_the_2009_Tribeca_Film_Festival.jpg"},
+  {name:"Future",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/9/9e/Future_rapper_2014.jpg"},
+  {name:"Ice Cube",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/1/1b/Ice_Cube_2012_crop.jpg"},
+  {name:"Snoop Dogg",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/c/cc/Snoop_Dogg_2019_by_Glenn_Francis.jpg"},
+  /* ── SINGERS ── */
   {name:"The Weeknd",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/9/95/The_Weeknd_Cannes_2023.png"},
   {name:"Taylor Swift",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/f/f2/Taylor_Swift_2_-_2024.jpg"},
   {name:"Michael Jackson",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/5/55/Michael_Jackson_in_1988.jpg"},
   {name:"Billie Eilish",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Billie_Eilish_2019_by_Glenn_Francis.jpg"},
   {name:"Bruno Mars",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/a/a4/Bruno_Mars_Live_Brazil.jpg"},
-  {name:"Cristiano Ronaldo",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"},
-  {name:"Lionel Messi",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg"},
+  /* ── ATHLETES ── */
+  {name:"Cristiano Ronaldo",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"},
+  {name:"Lionel Messi",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg"},
+  {name:"Michael Jordan",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/ae/Michael_Jordan_in_2014.jpg"},
+  {name:"LeBron James",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/cf/LeBron_James_crop.jpg"},
+  {name:"David Beckham",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/2/26/David_Beckham_2014.jpg"},
+  {name:"Khabib Nurmagomedov",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/a1/Khabib_Nurmagomedov_%282019%29.jpg"},
+  {name:"Mike Tyson",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/e/e5/Mike_Tyson_2019.jpg"},
+  {name:"Muhammad Ali",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/89/Muhammad_Ali_NYWTS.jpg"},
+  /* ── CELEBRITIES ── */
   {name:"MrBeast",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/5/58/MrBeast_2023.jpg"},
   {name:"Elon Musk",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ed/Elon_Musk_Royal_Society.jpg"},
   {name:"Dwayne Johnson",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Dwayne_Johnson_2014.jpg"},
@@ -343,6 +380,110 @@ const CHARACTERS = [
   {name:"Keanu Reeves",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Keanu_Reeves_2013.jpg"},
   {name:"Zendaya",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ef/Zendaya_2019_by_Glenn_Francis.jpg"},
   {name:"Ryan Reynolds",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/04/Ryan_Reynolds_by_Gage_Skidmore.jpg"},
+  {name:"John Cena",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/4/45/John_Cena_July_2018.jpg"},
+  {name:"Kevin Hart",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/00/Kevin_Hart_2017_%28cropped%29.jpg"},
+  {name:"Barack Obama",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/8/8d/President_Barack_Obama.jpg"},
+  {name:"Zohran Mamdani",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/b/b0/Zohran_Mamdani_05.25.25_%28cropped%29.jpg"},
+  /* ── HISTORICAL ── */
+  {name:"Osama bin Laden",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/6/64/Osama_bin_Laden_portrait.jpg"},
+  {name:"Adolf Hitler",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Bundesarchiv_Bild_183-S33882%2C_Adolf_Hitler_retouched.jpg"},
+  /* ── ANIMALS ── */
+  {name:"Lion",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg"},
+  {name:"Tiger",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/Tiger.50.jpg"},
+  {name:"Panda",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Grosser_Panda.JPG"},
+  {name:"Penguin",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/e/e8/Emperor_Penguin_Manchot_empereur.jpg"},
+  {name:"Wolf",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/1/12/Canis_lupus_laying.jpg"},
+  {name:"Elephant",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg"},
+  {name:"Gorilla",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Gorilla_gorilla_gorilla8.jpg"},
+  {name:"Shark",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/White_shark.jpg"},
+  {name:"Crocodile",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/7e/NileCrocodile.jpg"},
+  {name:"Koala",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Koala_climbing_tree.jpg"}
+];
+
+// Emoji fallback map for ALL categories
+const CAT_EMOJI={anime:'⚔️',cartoon:'🎨',tv:'📺',superhero:'🦸',fictional:'📖',rapper:'🎤',singer:'🎵',athlete:'🏆',celebrity:'⭐',historical:'🏛️',animal:'🐾'};
+  {name:"Naruto Uzumaki",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/94/NarutoCoverTankobon1.jpg"},
+  {name:"Monkey D. Luffy",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png"},
+  {name:"Saitama",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/c3/Saitama_OnePunchMan.png"},
+  {name:"Levi Ackerman",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/2/2e/Levi_Ackerman.png"},
+  {name:"Light Yagami",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9f/Light_Yagami.jpg"},
+  {name:"Gojo Satoru",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9a/Satoru_Gojo.png"},
+  {name:"Eren Yeager",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/9b/Eren_Yeager.png"},
+  {name:"Tanjiro Kamado",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/7/74/Tanjiro_Kamado.png"},
+
+  /* ── CARTOON ── */
+  {name:"Rick Sanchez",category:"cartoon",image:"https://upload.wikimedia.org/wikipedia/en/c/c9/Rick_Sanchez.png"},
+  {name:"Morty Smith",category:"cartoon",image:"https://upload.wikimedia.org/wikipedia/en/0/03/Morty_Smith.png"},
+
+  /* ── TV ── */
+  {name:"Homelander",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/a/a2/Homelander.png"},
+  {name:"Billy Butcher",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/6/6a/Billy_Butcher.png"},
+  {name:"Soldier Boy",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/1/1c/Soldier_Boy_The_Boys.png"},
+  {name:"Omni-Man",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/8/80/Omni-Man.png"},
+  {name:"Invincible",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/a/a0/Invincible_Mark_Grayson.png"},
+  {name:"Dexter Morgan",category:"tv",image:"https://upload.wikimedia.org/wikipedia/en/c/c6/Dexter_Morgan_character.jpg"},
+
+  /* ── SUPERHERO ── */
+  {name:"Superman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/e/ea/SupermanRoss.png"},
+  {name:"Batman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/d/d6/Batman_DC_Comics.jpg"},
+  {name:"Hulk",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/5/59/Hulk_%28comics_character%29.jpg"},
+  {name:"Thor",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/1/10/Thor_Odinson.jpg"},
+  {name:"Captain America",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/3/35/Captain_America_Vol_7_1_Textless.jpg"},
+  {name:"Spider-Man",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/2/21/Web_of_Spider-Man_Vol_1_129-1.png"},
+  {name:"Venom",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/7/76/Venom_first_appearance.jpg"},
+  {name:"Green Arrow",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/b/bf/GreenArrow.png"},
+  {name:"Deadpool",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/en/a/a6/Deadpool_character.png"},
+
+  /* ── FICTIONAL ── */
+  {name:"Harry Potter",category:"fictional",image:"https://upload.wikimedia.org/wikipedia/en/d/d7/Harry_Potter_character_banner.jpg"},
+  {name:"Peter Pan",category:"fictional",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Peter_Pan_1915_silhouette.png"},
+
+  /* ── RAPPERS ── */
+  {name:"Drake",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/bd/Drake_July_2016.jpg"},
+  {name:"Kendrick Lamar",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/6/61/Kendrick_Lamar_2018_Pulitzer_Prize.jpg"},
+  {name:"Eminem",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/b5/Eminem_2021.jpg"},
+  {name:"Travis Scott",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/2/28/Travis_Scott_2019_by_Glenn_Francis.jpg"},
+  {name:"Kanye West",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Kanye_West_at_the_2009_Tribeca_Film_Festival.jpg"},
+  {name:"Future",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/9/9e/Future_rapper_2014.jpg"},
+  {name:"Ice Cube",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/1/1b/Ice_Cube_2012_crop.jpg"},
+  {name:"Snoop Dogg",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/c/cc/Snoop_Dogg_2019_by_Glenn_Francis.jpg"},
+
+  /* ── SINGERS ── */
+  {name:"The Weeknd",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/9/95/The_Weeknd_Cannes_2023.png"},
+  {name:"Taylor Swift",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/f/f2/Taylor_Swift_2_-_2024.jpg"},
+  {name:"Michael Jackson",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/5/55/Michael_Jackson_in_1988.jpg"},
+  {name:"Billie Eilish",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Billie_Eilish_2019_by_Glenn_Francis.jpg"},
+  {name:"Bruno Mars",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/a/a4/Bruno_Mars_Live_Brazil.jpg"},
+
+  /* ── ATHLETES ── */
+  {name:"Cristiano Ronaldo",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"},
+  {name:"Lionel Messi",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg"},
+  {name:"Michael Jordan",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/ae/Michael_Jordan_in_2014.jpg"},
+  {name:"LeBron James",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/cf/LeBron_James_crop.jpg"},
+  {name:"David Beckham",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/2/26/David_Beckham_2014.jpg"},
+  {name:"Khabib Nurmagomedov",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/a1/Khabib_Nurmagomedov_%282019%29.jpg"},
+  {name:"Mike Tyson",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/e/e5/Mike_Tyson_2019.jpg"},
+  {name:"Muhammad Ali",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/89/Muhammad_Ali_NYWTS.jpg"},
+
+  /* ── CELEBRITIES ── */
+  {name:"MrBeast",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/5/58/MrBeast_2023.jpg"},
+  {name:"Elon Musk",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ed/Elon_Musk_Royal_Society.jpg"},
+  {name:"Dwayne Johnson",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Dwayne_Johnson_2014.jpg"},
+  {name:"Tom Holland",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/3/34/Tom_Holland_by_Gage_Skidmore.jpg"},
+  {name:"Johnny Depp",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/2/21/Johnny_Depp_2020.jpg"},
+  {name:"Keanu Reeves",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Keanu_Reeves_2013.jpg"},
+  {name:"Zendaya",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ef/Zendaya_2019_by_Glenn_Francis.jpg"},
+  {name:"Ryan Reynolds",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/04/Ryan_Reynolds_by_Gage_Skidmore.jpg"},
+  {name:"John Cena",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/4/45/John_Cena_July_2018.jpg"},
+  {name:"Kevin Hart",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/00/Kevin_Hart_2017_%28cropped%29.jpg"},
+  {name:"Barack Obama",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/8/8d/President_Barack_Obama.jpg"},
+  {name:"Zohran Mamdani",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/b/b0/Zohran_Mamdani_05.25.25_%28cropped%29.jpg"},
+
+  /* ── HISTORICAL ── */
+  {name:"Osama bin Laden",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/6/64/Osama_bin_Laden_portrait.jpg"},
+  {name:"Adolf Hitler",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Bundesarchiv_Bild_183-S33882%2C_Adolf_Hitler_retouched.jpg"},
+
+  /* ── ANIMALS ── */
   {name:"Lion",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg"},
   {name:"Tiger",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/Tiger.50.jpg"},
   {name:"Panda",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Grosser_Panda.JPG"},
@@ -588,8 +729,7 @@ function buildCharsPanel(state){
       const fb=document.createElement('div');
       fb.className='cpi-img';
       fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;';
-      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾'};
-      fb.innerText=cats[char.category]||'?';
+      fb.innerText=CAT_EMOJI[char.category]||'?';
       item.insertBefore(fb,item.firstChild);
     };
     item.appendChild(img);
@@ -712,8 +852,7 @@ function buildCams(state){
       img.style.display='none';
       const emoji=document.createElement('div');
       emoji.style.cssText='width:36px;height:36px;border-radius:6px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid #333;';
-      const cats={anime:'⚔️',rapper:'🎤',singer:'🎵',celebrity:'⭐',animal:'🐾'};
-      emoji.innerText=cats[char.category]||'?';
+      emoji.innerText=CAT_EMOJI[char.category]||'?';
       img.parentNode.insertBefore(emoji,img);
     };
     card.appendChild(img);
@@ -953,58 +1092,96 @@ function pushMsg(text,type='chat'){
   });
 }
 
+/* ── NAME MATCHING ── */
+// Returns true if typed text matches the character's full name OR first name
+function matchesCharName(text){
+  if(!myChar)return false;
+  const t=text.trim().toLowerCase();
+  const firstName=myChar.name.split(' ')[0].toLowerCase();
+  const fullName=myChar.name.toLowerCase();
+  return t===fullName||t===firstName;
+}
+
+/* ── SHARED CORRECT-GUESS SCORING ── */
+// Called after we know the player guessed correctly.
+// Reads current state, calculates pts, writes updates to Firebase.
+function handleCorrectGuess(){
+  db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+    const s=snap.val();if(!s)return;
+    if(s.guessed?.[myId])return; // already counted — no double-score
+    const roundCorrectNow=(s.roundCorrect||0)+1;
+    const pts=roundCorrectNow===1?3:roundCorrectNow===2?2:1;
+    const updates={};
+    updates[`guessed/${myId}`]=true;
+    updates[`scores/${myId}`]=(s.scores?.[myId]||0)+pts;
+    updates['roundCorrect']=roundCorrectNow;
+    db.ref(`guess_rooms/${gameId}/chat`).push({
+      pid:'system',num:0,
+      text:`🎉 Player #${myNum} guessed correctly! (+${pts} pts)`,
+      type:'correct',ts:Date.now()
+    });
+    const totalPlayers=Object.keys(s.playerNums||{}).length;
+    const roundOver=roundCorrectNow>=2||(roundCorrectNow>=totalPlayers-1);
+    if(roundOver){
+      const alreadyGuessed={...s.guessed||{},[myId]:true};
+      const remaining=Object.keys(s.playerNums||{}).filter(p=>!alreadyGuessed[p]);
+      remaining.forEach(p=>{updates[`scores/${p}`]=(s.scores?.[p]||0)+1;});
+      updates['status']=s.round>=3?'game_end':'round_end';
+    }else{
+      // advance turn to next non-guessed player
+      const total=Object.keys(s.playerNums||{}).length;
+      let next=s.turnNum;
+      for(let i=0;i<total;i++){
+        next=(next%total)+1;
+        const nextPid=Object.keys(s.playerNums).find(p=>s.playerNums[p]===next);
+        if(!s.guessed?.[nextPid]&&nextPid!==myId)break;
+      }
+      updates['turnNum']=next;
+    }
+    db.ref(`guess_rooms/${gameId}/state`).update(updates);
+  });
+}
+
+/* ── CHAT INPUT ── */
+// Any player can type freely. If the text matches their own character's
+// first name OR full name it counts as a correct guess instantly.
 function sendChat(){
   const input=$('chatInput');
   const text=input.value.trim();
   if(!text)return;
-  pushMsg(text,'chat');
   input.value='';
+  if(matchesCharName(text)){
+    // Check not already guessed before crediting
+    db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
+      const s=snap.val();if(!s)return;
+      if(s.guessed?.[myId]){
+        // Already guessed — just send as a regular chat message
+        pushMsg(text,'chat');
+        return;
+      }
+      // Publish the message showing the correct guess then score it
+      pushMsg(`${text} ✓`,'correct');
+      handleCorrectGuess();
+    });
+    return;
+  }
+  pushMsg(text,'chat');
 }
 
+/* ── FORMAL GUESS (guess row, turn-based) ── */
 function submitGuess(){
   const input=$('guessInput');
   const text=input.value.trim();
   if(!text)return;
+  input.value='';
   db.ref(`guess_rooms/${gameId}/state`).once('value').then(snap=>{
     const s=snap.val();if(!s)return;
     const turnPid=Object.keys(s.playerNums||{}).find(p=>s.playerNums[p]===s.turnNum);
     if(turnPid!==myId){showToast("it's not your turn");return;}
     if(s.guessed?.[myId]){showToast('you already guessed');return;}
-    const correct=text.trim().toLowerCase()===myChar.name.toLowerCase();
+    const correct=matchesCharName(text);
     pushMsg(`GUESS: ${text}${correct?' ✓':' ✗'}`,correct?'correct':'chat');
-    if(correct){
-      const roundCorrectNow=(s.roundCorrect||0)+1;
-      const pts=roundCorrectNow===1?3:roundCorrectNow===2?2:1;
-      const updates={};
-      updates[`guessed/${myId}`]=true;
-      updates[`scores/${myId}`]=(s.scores?.[myId]||0)+pts;
-      updates['roundCorrect']=roundCorrectNow;
-      db.ref(`guess_rooms/${gameId}/chat`).push({
-        pid:'system',num:0,
-        text:`🎉 Player #${myNum} guessed correctly! (+${pts} pts)`,
-        type:'correct',ts:Date.now()
-      });
-      const totalPlayers=Object.keys(s.playerNums||{}).length;
-      const roundOver=roundCorrectNow>=2||(roundCorrectNow>=totalPlayers-1);
-      if(roundOver){
-        const alreadyGuessed={...s.guessed||{},[myId]:true};
-        const remaining=Object.keys(s.playerNums||{}).filter(p=>!alreadyGuessed[p]);
-        remaining.forEach(p=>{updates[`scores/${p}`]=(s.scores?.[p]||0)+1;});
-        updates['status']=s.round>=3?'game_end':'round_end';
-      }else{
-        // advance to next non-guessed player
-        const total=Object.keys(s.playerNums||{}).length;
-        let next=s.turnNum;
-        for(let i=0;i<total;i++){
-          next=(next%total)+1;
-          const nextPid=Object.keys(s.playerNums).find(p=>s.playerNums[p]===next);
-          if(!s.guessed?.[nextPid]&&nextPid!==myId)break;
-        }
-        updates['turnNum']=next;
-      }
-      db.ref(`guess_rooms/${gameId}/state`).update(updates);
-    }
-    input.value='';
+    if(correct) handleCorrectGuess();
   });
 }
 
