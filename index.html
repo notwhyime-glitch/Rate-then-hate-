@@ -545,17 +545,6 @@ function renderRatingStats(){
   el.innerHTML=`<span style="color:#555">avg rating</span>&nbsp;<span style="color:#fff;font-weight:500">${avg}</span>&nbsp;<span style="color:#333">/ ${arr.length} calls</span>`;
 }
 
-// Returns an audio-only MediaStream from localStream.
-// The video track stays in localStream for later use in upgradeToVideo —
-// we just don't SEND it until after the rating screen.
-function getAudioOnlyStream(){
-  if(!localStream)return null;
-  const audio=localStream.getAudioTracks();
-  if(!audio.length)return localStream;
-  return new MediaStream(audio);
-}
-
-const $=id=>document.getElementById(id);
 const setStatus=(msg,cls='')=>{const el=$('statusLine');el.className=cls;el.innerHTML=msg;};
 function showToast(msg,dur=3000){
   const t=$('toast');t.innerText=msg;t.classList.add('show');
@@ -667,34 +656,11 @@ function stopSignalListener(){if(signalRef){signalRef.off();signalRef=null;}}
 
 function listenForPartnerSignals(){
   if(!currentMatchId||!partnerPeerId)return;
-  // listen for skip/video-ready signals
   signalRef=db.ref(`matches/${currentMatchId}/signals/${partnerPeerId}`);
   signalRef.on('value',snap=>{
     const val=snap.val();if(!val)return;
     if(val==='skip'){showToast('they skipped you 💀');reset();}
     if(val==='video-ready'){handleRemoteVideoReady();}
-  });
-  // listen for WebRTC renegotiation (video upgrade)
-  let negotiating=false;
-  db.ref(`matches/${currentMatchId}/webrtc/${partnerPeerId}`).on('value',async snap=>{
-    const val=snap.val(),pc=currentCall&&currentCall.peerConnection;
-    if(!pc||!val)return;
-    if(val.offer){
-      if(negotiating||pc.signalingState!=='stable')return;
-      negotiating=true;
-      try{
-        await pc.setRemoteDescription(new RTCSessionDescription(val.offer));
-        const ans=await pc.createAnswer();
-        await pc.setLocalDescription(ans);
-        db.ref(`matches/${currentMatchId}/webrtc/${myId}/answer`).set({sdp:ans.sdp,type:ans.type});
-      }catch(e){console.error('[rathe] offer handling',e);}
-      finally{negotiating=false;}
-    }
-    if(val.answer){
-      if(pc.signalingState!=='have-local-offer')return;
-      try{await pc.setRemoteDescription(new RTCSessionDescription(val.answer));}
-      catch(e){console.error('[rathe] answer handling',e);}
-    }
   });
 }
 
@@ -790,16 +756,20 @@ async function handleIncomingCall(call){
     $('cancelBtn').style.display='none';
     startConnectTimeout();
   }
-  // Answer with audio-only — video added after rating screen
-  call.answer(getAudioOnlyStream());
+  // Disable video track so only audio flows during the session phase.
+  // Using track.enabled=false on the SAME stream avoids stream-ID mismatches
+  // in the SDP that would silently break negotiation.
+  localStream.getVideoTracks().forEach(t=>{t.enabled=false;});
+  call.answer(localStream);
   if(!signalRef)listenForPartnerSignals();
   handleCall(call);
 }
 
 function initiateCall(){
   if(!peer||!partnerPeerId||!localStream)return;
-  // Send audio-only — video added after rating via upgradeToVideo
-  const call=peer.call(partnerPeerId,getAudioOnlyStream());
+  // Disable video — re-enabled in upgradeToVideo without renegotiation
+  localStream.getVideoTracks().forEach(t=>{t.enabled=false;});
+  const call=peer.call(partnerPeerId,localStream);
   handleCall(call);
 }
 
@@ -1013,17 +983,17 @@ async function upgradeToVideo(){
   if(phase==='video')return;
   phase='video';
   pendingVideoReady=false;
-  setStatus('enabling camera...','green');
 
-  // localStream already has a video track from the upfront permission request.
-  // We just didn't SEND it during the audio-only session phase.
-  // Only fall back to a new getUserMedia if the stream was somehow lost.
-  if(localStream&&localStream.active&&localStream.getVideoTracks().length){
-    videoStream=localStream; // reuse — no second dialog
-  }else{
+  // If somehow we don't have a video track (camera was denied earlier), get one now.
+  if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
     try{
-      videoStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      const vs=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
       localStorage.setItem(PERM_KEY,'1');
+      // Add the new video track to the existing peer connection
+      const pc=currentCall&&currentCall.peerConnection;
+      const vt=vs.getVideoTracks()[0];
+      if(pc&&vt) pc.addTrack(vt,vs);
+      videoStream=vs;
     }catch(e){
       showToast('camera access denied — staying audio only');
       setStatus('audio only mode','green');
@@ -1032,51 +1002,25 @@ async function upgradeToVideo(){
       setReportBtn(true);
       return;
     }
+  }else{
+    // Re-enable the video track that's been disabled since the call started.
+    // It's already in the SDP — no renegotiation needed. Frames just start flowing.
+    videoStream=localStream;
+    localStream.getVideoTracks().forEach(t=>{t.enabled=true;});
   }
+
+  // Show our own camera
   $('localVideo').srcObject=videoStream;
-  // local video is muted to prevent echo — just play it
   $('localVideo').muted=true;
   $('localVideo').play().then(()=>$('localVideo').classList.add('live')).catch(()=>{});
   $('videoSide').classList.add('active');
   setReportBtn(true);
 
-  const pc=currentCall&&currentCall.peerConnection;
-  if(!pc){
-    sendSignal('video-ready');
-    setStatus('video call — live','green');
-    $('skipBtn').style.display='block';
-    return;
-  }
-
-  // swap audio track
-  const videoTrack=videoStream.getVideoTracks()[0];
-  const audioTrack=videoStream.getAudioTracks()[0];
-  const audioSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
-  if(audioSender&&audioTrack){
-    await audioSender.replaceTrack(audioTrack).catch(e=>console.warn('[rathe] replaceTrack audio',e));
-  }
-
-  // renegotiate to add video — only lower peer ID sends offer to avoid collision
-  if(myId<partnerPeerId){
-    let offerPending=false;
-    pc.onnegotiationneeded=async()=>{
-      if(offerPending||pc.signalingState!=='stable')return;
-      offerPending=true;
-      try{
-        const offer=await pc.createOffer();
-        if(pc.signalingState!=='stable'){offerPending=false;return;}
-        await pc.setLocalDescription(offer);
-        db.ref(`matches/${currentMatchId}/webrtc/${myId}/offer`).set({sdp:offer.sdp,type:offer.type});
-      }catch(e){console.error('[rathe] offer error',e);}
-      finally{offerPending=false;}
-    };
-  }
-
-  const existingSender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
-  if(existingSender){
-    await existingSender.replaceTrack(videoTrack).catch(e=>console.warn('[rathe] replaceTrack video',e));
-  }else{
-    pc.addTrack(videoTrack,videoStream);
+  // Make remote video visible — track was already received, just hidden
+  const vid=$('remoteVideo');
+  if(vid.srcObject&&vid.srcObject.getVideoTracks().length){
+    vid.classList.add('live');
+    document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
   }
 
   sendSignal('video-ready');
