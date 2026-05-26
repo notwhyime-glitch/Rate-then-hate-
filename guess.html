@@ -314,8 +314,91 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 <script>
 /* ── DATASET ── */
 const CHARACTERS = [
-  /* ── ANIME ── */
-  {name:"Goku",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/0/04/Goku_Dragon_Ball_Z.png"},
+  /* ── ANIME — no free hotlinkable images; emoji fallback used ── */
+  {name:"Goku",category:"anime",image:""},
+  {name:"Naruto Uzumaki",category:"anime",image:""},
+  {name:"Monkey D. Luffy",category:"anime",image:""},
+  {name:"Saitama",category:"anime",image:""},
+  {name:"Levi Ackerman",category:"anime",image:""},
+  {name:"Light Yagami",category:"anime",image:""},
+  {name:"Gojo Satoru",category:"anime",image:""},
+  {name:"Eren Yeager",category:"anime",image:""},
+  {name:"Tanjiro Kamado",category:"anime",image:""},
+  /* ── CARTOON ── */
+  {name:"Rick Sanchez",category:"cartoon",image:""},
+  {name:"Morty Smith",category:"cartoon",image:""},
+  /* ── TV / STREAMING — use actor Wikimedia Commons photos ── */
+  {name:"Homelander",category:"tv",image:"https://upload.wikimedia.org/wikipedia/commons/2/24/Antony_Starr_by_Gage_Skidmore.jpg"},
+  {name:"Billy Butcher",category:"tv",image:"https://upload.wikimedia.org/wikipedia/commons/9/93/Karl_Urban_2013_Comic_Con.jpg"},
+  {name:"Soldier Boy",category:"tv",image:"https://upload.wikimedia.org/wikipedia/commons/f/f8/Jensen_Ackles_SDCC_2019.jpg"},
+  {name:"Omni-Man",category:"tv",image:""},
+  {name:"Invincible",category:"tv",image:""},
+  {name:"Dexter Morgan",category:"tv",image:"https://upload.wikimedia.org/wikipedia/commons/e/e4/Michael_C._Hall_2012.jpg"},
+  /* ── SUPERHERO — use actor photos for MCU/DCEU; pure comic → emoji ── */
+  {name:"Superman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/1/10/Henry_Cavill_at_2013_Comic_Con.jpg"},
+  {name:"Batman",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/a/a1/Christian_Bale_by_Gage_Skidmore_2.jpg"},
+  {name:"Hulk",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/9/9e/Mark_Ruffalo_by_Gage_Skidmore.jpg"},
+  {name:"Thor",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/c/c3/Chris_Hemsworth_2014.jpg"},
+  {name:"Captain America",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/8/8b/Chris_Evans_Captain_America_2.jpg"},
+  {name:"Spider-Man",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/3/34/Tom_Holland_by_Gage_Skidmore.jpg"},
+  {name:"Venom",category:"superhero",image:""},
+  {name:"Green Arrow",category:"superhero",image:""},
+  {name:"Deadpool",category:"superhero",image:"https://upload.wikimedia.org/wikipedia/commons/0/04/Ryan_Reynolds_by_Gage_Skidmore.jpg"},
+  /* ── FICTIONAL ── */
+  {name:"Harry Potter",category:"fictional",image:"https://upload.wikimedia.org/wikipedia/commons/f/f2/Daniel_Radcliffe_2009.jpg"},
+  {name:"Peter Pan",category:"fictional",image:""},
+  /* ── RAPPERS ── */
+  {name:"Drake",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/bd/Drake_July_2016.jpg"},
+  {name:"Kendrick Lamar",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/6/61/Kendrick_Lamar_2018_Pulitzer_Prize.jpg"},
+  {name:"Eminem",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/b/b5/Eminem_2021.jpg"},
+  {name:"Travis Scott",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/2/28/Travis_Scott_2019_by_Glenn_Francis.jpg"},
+  {name:"Kanye West",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Kanye_West_at_the_2009_Tribeca_Film_Festival.jpg"},
+  {name:"Future",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/9/9e/Future_rapper_2014.jpg"},
+  {name:"Ice Cube",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/1/1b/Ice_Cube_2012_crop.jpg"},
+  {name:"Snoop Dogg",category:"rapper",image:"https://upload.wikimedia.org/wikipedia/commons/c/cc/Snoop_Dogg_2019_by_Glenn_Francis.jpg"},
+  /* ── SINGERS ── */
+  {name:"The Weeknd",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/9/95/The_Weeknd_Cannes_2023.png"},
+  {name:"Taylor Swift",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/f/f2/Taylor_Swift_2_-_2024.jpg"},
+  {name:"Michael Jackson",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/5/55/Michael_Jackson_in_1988.jpg"},
+  {name:"Billie Eilish",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Billie_Eilish_2019_by_Glenn_Francis.jpg"},
+  {name:"Bruno Mars",category:"singer",image:"https://upload.wikimedia.org/wikipedia/commons/a/a4/Bruno_Mars_Live_Brazil.jpg"},
+  /* ── ATHLETES ── */
+  {name:"Cristiano Ronaldo",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"},
+  {name:"Lionel Messi",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg"},
+  {name:"Michael Jordan",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/ae/Michael_Jordan_in_2014.jpg"},
+  {name:"LeBron James",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/c/cf/LeBron_James_crop.jpg"},
+  {name:"David Beckham",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/2/26/David_Beckham_2014.jpg"},
+  {name:"Khabib Nurmagomedov",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/a/a1/Khabib_Nurmagomedov_%282019%29.jpg"},
+  {name:"Mike Tyson",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/e/e5/Mike_Tyson_2019.jpg"},
+  {name:"Muhammad Ali",category:"athlete",image:"https://upload.wikimedia.org/wikipedia/commons/8/89/Muhammad_Ali_NYWTS.jpg"},
+  /* ── CELEBRITIES ── */
+  {name:"MrBeast",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/5/58/MrBeast_2023.jpg"},
+  {name:"Elon Musk",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ed/Elon_Musk_Royal_Society.jpg"},
+  {name:"Dwayne Johnson",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Dwayne_Johnson_2014.jpg"},
+  {name:"Tom Holland",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/3/34/Tom_Holland_by_Gage_Skidmore.jpg"},
+  {name:"Johnny Depp",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/2/21/Johnny_Depp_2020.jpg"},
+  {name:"Keanu Reeves",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/6/60/Keanu_Reeves_2013.jpg"},
+  {name:"Zendaya",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/e/ef/Zendaya_2019_by_Glenn_Francis.jpg"},
+  {name:"Ryan Reynolds",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/04/Ryan_Reynolds_by_Gage_Skidmore.jpg"},
+  {name:"John Cena",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/4/45/John_Cena_July_2018.jpg"},
+  {name:"Kevin Hart",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/0/00/Kevin_Hart_2017_%28cropped%29.jpg"},
+  {name:"Barack Obama",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/8/8d/President_Barack_Obama.jpg"},
+  {name:"Zohran Mamdani",category:"celebrity",image:"https://upload.wikimedia.org/wikipedia/commons/b/b0/Zohran_Mamdani_05.25.25_%28cropped%29.jpg"},
+  /* ── HISTORICAL ── */
+  {name:"Osama bin Laden",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/6/64/Osama_bin_Laden_portrait.jpg"},
+  {name:"Adolf Hitler",category:"historical",image:"https://upload.wikimedia.org/wikipedia/commons/e/e2/Bundesarchiv_Bild_183-S33882%2C_Adolf_Hitler_retouched.jpg"},
+  /* ── ANIMALS ── */
+  {name:"Lion",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/73/Lion_waiting_in_Namibia.jpg"},
+  {name:"Tiger",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/Tiger.50.jpg"},
+  {name:"Panda",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Grosser_Panda.JPG"},
+  {name:"Penguin",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/e/e8/Emperor_Penguin_Manchot_empereur.jpg"},
+  {name:"Wolf",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/1/12/Canis_lupus_laying.jpg"},
+  {name:"Elephant",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/3/37/African_Bush_Elephant.jpg"},
+  {name:"Gorilla",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Gorilla_gorilla_gorilla8.jpg"},
+  {name:"Shark",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/5/56/White_shark.jpg"},
+  {name:"Crocodile",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/7/7e/NileCrocodile.jpg"},
+  {name:"Koala",category:"animal",image:"https://upload.wikimedia.org/wikipedia/commons/4/49/Koala_climbing_tree.jpg"}
+];
   {name:"Naruto Uzumaki",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/9/94/NarutoCoverTankobon1.jpg"},
   {name:"Monkey D. Luffy",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/cb/Monkey_D_Luffy.png"},
   {name:"Saitama",category:"anime",image:"https://upload.wikimedia.org/wikipedia/en/c/c3/Saitama_OnePunchMan.png"},
@@ -630,16 +713,25 @@ function buildCharsPanel(state){
     item.className='char-panel-item'+(isMe?' is-mine':'');
     const img=document.createElement('img');
     img.className='cpi-img';
-    img.src=char.image;img.alt=char.name;
-    img.onerror=()=>{
-      img.style.display='none';
+    if(char.image){
+      img.src=char.image;img.alt=char.name;
+      img.onerror=()=>{
+        img.style.display='none';
+        const fb=document.createElement('div');
+        fb.className='cpi-img';
+        fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;';
+        fb.innerText=CAT_EMOJI[char.category]||'?';
+        item.insertBefore(fb,item.firstChild);
+      };
+      item.appendChild(img);
+    }else{
+      // No image URL — show emoji fallback directly
       const fb=document.createElement('div');
       fb.className='cpi-img';
-      fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;';
+      fb.style.cssText='display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;border-radius:8px;border:1px solid #222;flex-shrink:0;';
       fb.innerText=CAT_EMOJI[char.category]||'?';
-      item.insertBefore(fb,item.firstChild);
-    };
-    item.appendChild(img);
+      item.appendChild(fb);
+    }
     const info=document.createElement('div');
     info.className='cpi-info';
     info.innerHTML=`
@@ -753,16 +845,23 @@ function buildCams(state){
     const card=document.createElement('div');
     card.className='char-card'+(isMe?' hidden-self':'');
     card.id='charCard_'+pid;
-    const img=document.createElement('img');
-    img.className='char-img';img.src=char.image;img.alt=char.name;
-    img.onerror=()=>{
-      img.style.display='none';
+    if(char.image){
+      const img=document.createElement('img');
+      img.className='char-img';img.src=char.image;img.alt=char.name;
+      img.onerror=()=>{
+        img.style.display='none';
+        const emoji=document.createElement('div');
+        emoji.style.cssText='width:52px;height:52px;border-radius:8px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;border:1px solid #333;';
+        emoji.innerText=CAT_EMOJI[char.category]||'?';
+        card.insertBefore(emoji,card.firstChild);
+      };
+      card.appendChild(img);
+    }else{
       const emoji=document.createElement('div');
-      emoji.style.cssText='width:36px;height:36px;border-radius:6px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid #333;';
+      emoji.style.cssText='width:52px;height:52px;border-radius:8px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;border:1px solid #333;';
       emoji.innerText=CAT_EMOJI[char.category]||'?';
-      img.parentNode.insertBefore(emoji,img);
-    };
-    card.appendChild(img);
+      card.appendChild(emoji);
+    }
     const info=document.createElement('div');
     info.innerHTML=`<div class="char-name">${char.name}</div><div class="char-cat">${char.category}</div>`;
     card.appendChild(info);
