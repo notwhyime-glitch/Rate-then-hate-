@@ -507,14 +507,29 @@ function createPeer(){
   return new Peer(undefined,{
     host:'my-peer-server-mjl5.onrender.com',port:443,path:'/peerjs',
     secure:true,debug:1,
-    config:{iceServers:[
-      {urls:'stun:stun.l.google.com:19302'},
-      {urls:'stun:stun1.l.google.com:19302'},
-      {urls:'stun:stun2.l.google.com:19302'},
-      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
-    ]}
+    config:{
+      iceServers:[
+        // Google STUN — multiple for redundancy
+        {urls:'stun:stun.l.google.com:19302'},
+        {urls:'stun:stun1.l.google.com:19302'},
+        {urls:'stun:stun2.l.google.com:19302'},
+        {urls:'stun:stun3.l.google.com:19302'},
+        {urls:'stun:stun4.l.google.com:19302'},
+        // OpenRelay TURN — UDP (fastest, blocked in some countries)
+        {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+        // OpenRelay TURN — TCP (works through most firewalls)
+        {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+        // OpenRelay TURN — TLS over port 443 (works through strict firewalls / corporate NAT)
+        {urls:'turns:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+        // Metered.ca global relay — UDP + TCP + TLS (better international routing)
+        {urls:'turn:a.relay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+        {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+        {urls:'turns:a.relay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      ],
+      iceCandidatePoolSize:10,  // gather more candidates upfront
+      bundlePolicy:'max-bundle', // bundle all tracks on one transport — fewer ports needed
+      rtcpMuxPolicy:'require',   // mux RTCP with RTP — halves the ports needed
+    }
   });
 }
 
@@ -787,16 +802,26 @@ function handleCall(call){
     if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();vid.srcObject=rs;}
     if(rs.getTracks().find(t=>t.id===track.id))return;
     rs.addTrack(track);
-    // play muted first (autoplay policy), then unmute
+
+    // onunmute fires when frames actually start arriving (works for international/TURN
+    // connections where the sender enables their track after a delay)
+    track.onunmute=()=>{
+      vid.classList.add('live');
+      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+    };
+
+    // Also try to show immediately in case track is already sending frames
     vid.muted=true;
     vid.play().then(()=>{
       vid.muted=false;
-      vid.classList.add('live');
-      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+      // Only mark live if track is actually unmuted (frames flowing)
+      if(!track.muted){
+        vid.classList.add('live');
+        document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+      }
     }).catch(()=>{
-      // if unmuted play fails, try muted and keep video going
       vid.muted=true;
-      vid.play().then(()=>vid.classList.add('live')).catch(()=>{});
+      vid.play().catch(()=>{});
     });
   }
 
@@ -984,15 +1009,14 @@ async function upgradeToVideo(){
   phase='video';
   pendingVideoReady=false;
 
-  // If somehow we don't have a video track (camera was denied earlier), get one now.
+  // If no video track available, get one now
   if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
     try{
       const vs=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
       localStorage.setItem(PERM_KEY,'1');
-      // Add the new video track to the existing peer connection
       const pc=currentCall&&currentCall.peerConnection;
       const vt=vs.getVideoTracks()[0];
-      if(pc&&vt) pc.addTrack(vt,vs);
+      if(pc&&vt)pc.addTrack(vt,vs);
       videoStream=vs;
     }catch(e){
       showToast('camera access denied — staying audio only');
@@ -1003,8 +1027,8 @@ async function upgradeToVideo(){
       return;
     }
   }else{
-    // Re-enable the video track that's been disabled since the call started.
-    // It's already in the SDP — no renegotiation needed. Frames just start flowing.
+    // Re-enable the video track — already in the SDP, just enable=true
+    // and frames start flowing through whatever path ICE negotiated
     videoStream=localStream;
     localStream.getVideoTracks().forEach(t=>{t.enabled=true;});
   }
@@ -1016,12 +1040,42 @@ async function upgradeToVideo(){
   $('videoSide').classList.add('active');
   setReportBtn(true);
 
-  // Make remote video visible — track was already received, just hidden
-  const vid=$('remoteVideo');
-  if(vid.srcObject&&vid.srcObject.getVideoTracks().length){
-    vid.classList.add('live');
-    document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-  }
+  // Show remote video. For same-country (direct/STUN): track already in srcObject + frames flowing.
+  // For international (TURN relay): frames arrive up to a few seconds late — onunmute handles it.
+  const remoteVid=$('remoteVideo');
+  const tryShowRemoteVideo=()=>{
+    // Check srcObject first
+    if(remoteVid.srcObject){
+      const vtracks=remoteVid.srcObject.getVideoTracks();
+      vtracks.forEach(t=>{
+        // Set onunmute so we catch frames arriving late over TURN
+        t.onunmute=()=>{
+          remoteVid.classList.add('live');
+          document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+        };
+        // Already unmuted (same-country direct path) — show immediately
+        if(!t.muted){
+          remoteVid.classList.add('live');
+          document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+        }
+      });
+    }
+    // Also pull from RTCPeerConnection receivers in case track event was missed
+    const pc=currentCall&&currentCall.peerConnection;
+    if(pc){
+      pc.getReceivers().forEach(r=>{
+        if(r.track&&r.track.kind==='video')attachRemoteVideoTrack(r.track);
+      });
+    }
+  };
+  tryShowRemoteVideo();
+  // Keep polling for up to 15s — handles slow TURN relay connections
+  let pollCount=0;
+  const videoPoll=setInterval(()=>{
+    if(phase!=='video'||pollCount++>30){clearInterval(videoPoll);return;}
+    if(!remoteVid.classList.contains('live'))tryShowRemoteVideo();
+    else clearInterval(videoPoll);
+  },500);
 
   sendSignal('video-ready');
   setStatus('video call — live','green');
