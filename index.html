@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -592,6 +591,12 @@ function paintRatingStats(sum,count){
   el.innerHTML=`<span style="color:#555">avg rating</span>&nbsp;<span style="color:#fff;font-weight:500">${avg}</span>&nbsp;<span style="color:#333">/ ${count} calls</span>`;
 }
 
+// Hides the avg-rating badge — used once you're matched, since the call
+// itself is the focus at that point. renderRatingStats() brings it back.
+function hideRatingStats(){
+  const el=$('ratingStats');if(el)el.style.display='none';
+}
+
 function renderRatingStats(){
   const el=$('ratingStats');if(!el)return;
   const cached=JSON.parse(localStorage.getItem(RATINGS_CACHE_KEY)||'null');
@@ -764,6 +769,7 @@ $('startBtn').onclick=async()=>{
     }catch(e){showToast('mic & camera access needed!');return;}
   }
   phase='searching';
+  renderRatingStats();
   $('startBtn').classList.add('searching');
   $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
   setExtraButtons(false);
@@ -790,6 +796,7 @@ async function tryMatch(){
     db.ref(`lobby/${k}`).remove();
     if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
     partnerPeerId=pid;currentMatchId=matchId;phase='connecting';
+    hideRatingStats();
     clearInterval(searchInterval);searchInterval=null;
     callRetryCount=0;
     stopWaitTimer();
@@ -831,6 +838,7 @@ async function handleIncomingCall(call){
   if(!currentMatchId)currentMatchId=[myId,partnerPeerId].sort().join('_');
   if(phase!=='connecting'){
     phase='connecting';
+    hideRatingStats();
     if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
     clearInterval(searchInterval);searchInterval=null;
     callRetryCount=0;
@@ -1050,7 +1058,15 @@ function finishRating(val){
   partnerRatingRef=db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`);
   partnerRatingRef.on('value',snap=>{
     const v=snap.val();if(!v)return;
+    console.log('[rathe] partner rated you:',v);
     showRatingBadge('myRating',v);
+    // Toast as a guaranteed-visible backup — the badge sits on your own
+    // video tile, easy to miss since attention is naturally on the reveal/
+    // remote side. If this toast never fires, check devtools console on
+    // BOTH devices: it means the partner's write never landed, which
+    // usually means one side is still running an older cached copy of this
+    // file (their rating screen needs the same fixes to actually submit).
+    showToast(`they rated you: ${v}`,4000);
     // Accumulate the rating they gave us — persisted in Firebase so your
     // average sticks around across sessions instead of resetting
     saveReceivedRating(v);
@@ -1233,6 +1249,7 @@ $('cancelBtn').onclick=()=>{
   if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   phase='idle';
+  renderRatingStats();
   $('startBtn').classList.remove('searching');$('startBtn').style.display='block';
   $('startBtn').innerHTML='START MATCHING';$('cancelBtn').style.display='none';
   setExtraButtons(true);
@@ -1277,6 +1294,7 @@ function reset(){
   myRatingVal=null;
   setReportBtn(false);
   setStatus('ready when you are','');
+  renderRatingStats();
   // only reinit peer if unhealthy — preserve a working connection
   if(!peer||peer.destroyed||peer.disconnected){setTimeout(initPeer,300);}
 }
@@ -1295,6 +1313,7 @@ function resetToSearch(){
       }catch(e){return;}
     }
     phase='searching';
+    renderRatingStats();
     $('startBtn').classList.add('searching');
     $('startBtn').innerHTML='SEARCHING<span class="dots"></span>';
     setExtraButtons(false);
