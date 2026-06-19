@@ -456,6 +456,26 @@ firebase.initializeApp({
 });
 const db=firebase.database();
 
+// BUG FIX: this $ shorthand was being called all over the file (e.g. $('startBtn')
+// at the top level) but was never defined — that throws immediately on page load
+// and silently kills every script below the first call. Added here so everything
+// downstream actually works.
+const $=id=>document.getElementById(id);
+
+/* ── PERSISTENT DEVICE ID ──
+   Anonymous, no login system, so "the person" = this browser's local storage.
+   Generated once and reused forever so the Firebase rating record stays tied
+   to the same identity across sessions instead of resetting every visit. */
+function getDeviceId(){
+  let id=localStorage.getItem('rathe_device_id');
+  if(!id){
+    id='d_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+    localStorage.setItem('rathe_device_id',id);
+  }
+  return id;
+}
+const myDeviceId=getDeviceId();
+
 /* ── ONLINE COUNTER ── */
 function initOnlineCounter(){
   const ref=db.ref('online/'+Math.random().toString(36).slice(2));
@@ -535,7 +555,7 @@ function createPeer(){
 
 let peer=null;
 let myId=null, myLobbyKey=null, localStream=null, videoStream=null;
-let partnerPeerId=null, currentMatchId=null, currentCall=null, signalRef=null;
+let partnerPeerId=null, currentMatchId=null, currentCall=null, signalRef=null, partnerRatingRef=null;
 let phase='idle';
 let searchInterval=null, sessionTimer=null, ratingTimer=null, waitInterval=null;
 let connectTimeoutId=null;
@@ -543,21 +563,57 @@ let ratingSelected=false, ratingFired=false, sessionStarted=false;
 let myRatingVal=null, pendingVideoReady=false;
 let callRetryCount=0;
 
-// Ratings accumulation — persists across sessions in localStorage
-const RATINGS_STORE='rathe_ratings_v2';
-function saveReceivedRating(val){
-  const arr=JSON.parse(localStorage.getItem(RATINGS_STORE)||'[]');
-  arr.push(val);
-  localStorage.setItem(RATINGS_STORE,JSON.stringify(arr));
-  renderRatingStats();
-}
-function renderRatingStats(){
-  const arr=JSON.parse(localStorage.getItem(RATINGS_STORE)||'[]');
-  const el=$('ratingStats');if(!el)return;
-  if(!arr.length){el.style.display='none';return;}
-  const avg=(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1);
+/* ── PERSISTENT AVERAGE RATING ──
+   Stored in Firebase as a running {sum,count} under ratings/<deviceId> instead
+   of an ever-growing array in localStorage. This is what makes the average
+   "stick with" the person: it lives server-side, keyed off the persistent
+   device ID above, so it survives reloads and isn't capped by how much you
+   want to stuff into localStorage. A local cache is kept too so the badge
+   paints instantly on load instead of flashing empty while Firebase responds. */
+const RATINGS_CACHE_KEY='rathe_ratings_cache_v1';
+
+function paintRatingStats(sum,count){
+  const el=$('ratingStats');if(!el||!count)return;
+  const avg=(sum/count).toFixed(1);
   el.style.display='flex';
-  el.innerHTML=`<span style="color:#555">avg rating</span>&nbsp;<span style="color:#fff;font-weight:500">${avg}</span>&nbsp;<span style="color:#333">/ ${arr.length} calls</span>`;
+  el.innerHTML=`<span style="color:#555">avg rating</span>&nbsp;<span style="color:#fff;font-weight:500">${avg}</span>&nbsp;<span style="color:#333">/ ${count} calls</span>`;
+}
+
+function renderRatingStats(){
+  const el=$('ratingStats');if(!el)return;
+  const cached=JSON.parse(localStorage.getItem(RATINGS_CACHE_KEY)||'null');
+  if(cached&&cached.count)paintRatingStats(cached.sum,cached.count);
+  // Firebase is the source of truth — refresh from there in case this device's
+  // ratings were updated elsewhere (e.g. a previous tab) or the cache drifted.
+  db.ref(`ratings/${myDeviceId}`).once('value').then(snap=>{
+    const data=snap.val();
+    if(data&&data.count){
+      localStorage.setItem(RATINGS_CACHE_KEY,JSON.stringify(data));
+      paintRatingStats(data.sum,data.count);
+    }else if(!cached){
+      el.style.display='none';
+    }
+  }).catch(()=>{});
+}
+
+function saveReceivedRating(val){
+  db.ref(`ratings/${myDeviceId}`).transaction(cur=>{
+    const sum=(cur&&cur.sum||0)+val;
+    const count=(cur&&cur.count||0)+1;
+    return {sum,count};
+  }).then(result=>{
+    if(result.committed&&result.snapshot){
+      const data=result.snapshot.val();
+      localStorage.setItem(RATINGS_CACHE_KEY,JSON.stringify(data));
+      paintRatingStats(data.sum,data.count);
+    }
+  }).catch(()=>{
+    // offline / write denied — still reflect locally so the badge isn't stuck stale
+    const cached=JSON.parse(localStorage.getItem(RATINGS_CACHE_KEY)||'{"sum":0,"count":0}');
+    cached.sum+=val;cached.count+=1;
+    localStorage.setItem(RATINGS_CACHE_KEY,JSON.stringify(cached));
+    paintRatingStats(cached.sum,cached.count);
+  });
 }
 
 const setStatus=(msg,cls='')=>{const el=$('statusLine');el.className=cls;el.innerHTML=msg;};
@@ -972,10 +1028,12 @@ function finishRating(val){
   myRatingVal=val;
   showRatingBadge('remoteRating',val);
   db.ref(`matches/${currentMatchId}/ratings/${myId}`).set(val);
-  db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`).on('value',snap=>{
+  partnerRatingRef=db.ref(`matches/${currentMatchId}/ratings/${partnerPeerId}`);
+  partnerRatingRef.on('value',snap=>{
     const v=snap.val();if(!v)return;
     showRatingBadge('myRating',v);
-    // Accumulate the rating they gave us across all sessions
+    // Accumulate the rating they gave us — persisted in Firebase so your
+    // average sticks around across sessions instead of resetting
     saveReceivedRating(v);
   });
   $('rating-screen').style.display='none';
@@ -1149,6 +1207,13 @@ function reset(){
   if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
   if(myLobbyKey){db.ref(`lobby/${myLobbyKey}`).remove();myLobbyKey=null;}
   if(currentMatchId&&myId)db.ref(`matches/${currentMatchId}/presence/${myId}`).remove().catch(()=>{});
+  // BUG FIX: this listener was never turned off, so it kept accumulating across
+  // every match for the lifetime of the page (memory/connection leak).
+  if(partnerRatingRef){try{partnerRatingRef.off();}catch(e){}partnerRatingRef=null;}
+  // Tidy up the finished match record so /matches doesn't grow forever.
+  // Safe here — by the time reset() runs, any rating exchange already
+  // happened earlier in the 'rating'/'reveal' phase.
+  if(currentMatchId){db.ref(`matches/${currentMatchId}`).remove().catch(()=>{});}
   phase='idle';partnerPeerId=null;currentMatchId=null;
   ratingFired=false;ratingSelected=false;pendingVideoReady=false;sessionStarted=false;callRetryCount=0;
   $('startBtn').classList.remove('searching');$('startBtn').style.display='block';
