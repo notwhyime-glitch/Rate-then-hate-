@@ -333,6 +333,18 @@ body::before {
   </div>
 </div>
 
+<!-- BUG FIX: this entire block was missing from the HTML even though the CSS
+     (#rating-screen, #ratingTitle, .rate-grid, #countdownBar/#countdownFill)
+     and the JS (showRating(), finishRating()) both expected it to exist.
+     $('rating-screen') was returning null, which crashed the moment the
+     2-minute timer ran out and tried to show the rating screen. -->
+<div id="rating-screen">
+  <div id="ratingTitle">RATE THEM</div>
+  <div id="ratingSubtitle">how was that?</div>
+  <div class="rate-grid" id="rateGrid"></div>
+  <div id="countdownBar"><div id="countdownFill"></div></div>
+</div>
+
 <div id="reveal" style="display:none;">
   <div id="revealNum">3</div>
   <div id="revealLabel">video in</div>
