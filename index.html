@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -856,6 +857,42 @@ function initiateCall(){
   handleCall(call);
 }
 
+// BUG FIX: attachRemoteVideoTrack used to be defined only inside handleCall(),
+// so it was invisible to upgradeToVideo()'s tryShowRemoteVideo() — that's what
+// was throwing "attachRemoteVideoTrack is not defined" and aborting the video
+// upgrade partway through (which is also why the skip button never showed up
+// — see the fix note in upgradeToVideo below). Hoisted to top-level scope so
+// both places can reach it.
+function attachRemoteVideoTrack(track){
+  if(!track||track.readyState==='ended')return;
+  const vid=$('remoteVideo');
+  let rs=vid.srcObject;
+  if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();vid.srcObject=rs;}
+  if(rs.getTracks().find(t=>t.id===track.id))return;
+  rs.addTrack(track);
+
+  // onunmute fires when frames actually start arriving (works for international/TURN
+  // connections where the sender enables their track after a delay)
+  track.onunmute=()=>{
+    vid.classList.add('live');
+    document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+  };
+
+  // Also try to show immediately in case track is already sending frames
+  vid.muted=true;
+  vid.play().then(()=>{
+    vid.muted=false;
+    // Only mark live if track is actually unmuted (frames flowing)
+    if(!track.muted){
+      vid.classList.add('live');
+      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+    }
+  }).catch(()=>{
+    vid.muted=true;
+    vid.play().catch(()=>{});
+  });
+}
+
 /* ── CORE CALL HANDLER ── */
 function handleCall(call){
   currentCall=call;
@@ -863,36 +900,6 @@ function handleCall(call){
   let sessionTriggered=false;
 
   /* ── helpers ── */
-  function attachRemoteVideoTrack(track){
-    if(!track||track.readyState==='ended')return;
-    const vid=$('remoteVideo');
-    let rs=vid.srcObject;
-    if(!rs||!(rs instanceof MediaStream)){rs=new MediaStream();vid.srcObject=rs;}
-    if(rs.getTracks().find(t=>t.id===track.id))return;
-    rs.addTrack(track);
-
-    // onunmute fires when frames actually start arriving (works for international/TURN
-    // connections where the sender enables their track after a delay)
-    track.onunmute=()=>{
-      vid.classList.add('live');
-      document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-    };
-
-    // Also try to show immediately in case track is already sending frames
-    vid.muted=true;
-    vid.play().then(()=>{
-      vid.muted=false;
-      // Only mark live if track is actually unmuted (frames flowing)
-      if(!track.muted){
-        vid.classList.add('live');
-        document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-      }
-    }).catch(()=>{
-      vid.muted=true;
-      vid.play().catch(()=>{});
-    });
-  }
-
   function tryStartSession(){
     if(sessionTriggered)return;
     // allow triggering from both 'connecting' state (normal) and 'searching'
@@ -1079,77 +1086,90 @@ async function upgradeToVideo(){
   phase='video';
   pendingVideoReady=false;
 
-  // If no video track available, get one now
-  if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
-    try{
-      const vs=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-      localStorage.setItem(PERM_KEY,'1');
-      const pc=currentCall&&currentCall.peerConnection;
-      const vt=vs.getVideoTracks()[0];
-      if(pc&&vt)pc.addTrack(vt,vs);
-      videoStream=vs;
-    }catch(e){
-      showToast('camera access denied — staying audio only');
-      setStatus('audio only mode','green');
-      sendSignal('video-ready');
-      $('skipBtn').style.display='block';
-      setReportBtn(true);
-      return;
-    }
-  }else{
-    // Re-enable the video track — already in the SDP, just enable=true
-    // and frames start flowing through whatever path ICE negotiated
-    videoStream=localStream;
-    localStream.getVideoTracks().forEach(t=>{t.enabled=true;});
-  }
-
-  // Show our own camera
-  $('localVideo').srcObject=videoStream;
-  $('localVideo').muted=true;
-  $('localVideo').play().then(()=>$('localVideo').classList.add('live')).catch(()=>{});
-  $('videoSide').classList.add('active');
+  // BUG FIX: skip/report controls used to only appear at the very end of this
+  // function, after camera acquisition and track attachment. If anything in
+  // between threw (like the attachRemoteVideoTrack scope bug above), the
+  // person was stuck on a black screen with no button to leave. Showing them
+  // immediately means a failure further down can never trap anyone here.
+  $('skipBtn').style.display='block';
   setReportBtn(true);
 
-  // Show remote video. For same-country (direct/STUN): track already in srcObject + frames flowing.
-  // For international (TURN relay): frames arrive up to a few seconds late — onunmute handles it.
-  const remoteVid=$('remoteVideo');
-  const tryShowRemoteVideo=()=>{
-    // Check srcObject first
-    if(remoteVid.srcObject){
-      const vtracks=remoteVid.srcObject.getVideoTracks();
-      vtracks.forEach(t=>{
-        // Set onunmute so we catch frames arriving late over TURN
-        t.onunmute=()=>{
-          remoteVid.classList.add('live');
-          document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-        };
-        // Already unmuted (same-country direct path) — show immediately
-        if(!t.muted){
-          remoteVid.classList.add('live');
-          document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
-        }
-      });
+  try{
+    // If no video track available, get one now
+    if(!localStream||!localStream.active||!localStream.getVideoTracks().length){
+      try{
+        const vs=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+        localStorage.setItem(PERM_KEY,'1');
+        const pc=currentCall&&currentCall.peerConnection;
+        const vt=vs.getVideoTracks()[0];
+        if(pc&&vt)pc.addTrack(vt,vs);
+        videoStream=vs;
+      }catch(e){
+        showToast('camera access denied — staying audio only');
+        setStatus('audio only mode','green');
+        sendSignal('video-ready');
+        return;
+      }
+    }else{
+      // Re-enable the video track — already in the SDP, just enable=true
+      // and frames start flowing through whatever path ICE negotiated
+      videoStream=localStream;
+      localStream.getVideoTracks().forEach(t=>{t.enabled=true;});
     }
-    // Also pull from RTCPeerConnection receivers in case track event was missed
-    const pc=currentCall&&currentCall.peerConnection;
-    if(pc){
-      pc.getReceivers().forEach(r=>{
-        if(r.track&&r.track.kind==='video')attachRemoteVideoTrack(r.track);
-      });
-    }
-  };
-  tryShowRemoteVideo();
-  // Keep polling for up to 15s — handles slow TURN relay connections
-  let pollCount=0;
-  const videoPoll=setInterval(()=>{
-    if(phase!=='video'||pollCount++>30){clearInterval(videoPoll);return;}
-    if(!remoteVid.classList.contains('live'))tryShowRemoteVideo();
-    else clearInterval(videoPoll);
-  },500);
 
-  sendSignal('video-ready');
-  setStatus('video call — live','green');
-  $('skipBtn').style.display='block';
+    // Show our own camera
+    $('localVideo').srcObject=videoStream;
+    $('localVideo').muted=true;
+    $('localVideo').play().then(()=>$('localVideo').classList.add('live')).catch(()=>{});
+    $('videoSide').classList.add('active');
+
+    // Show remote video. For same-country (direct/STUN): track already in srcObject + frames flowing.
+    // For international (TURN relay): frames arrive up to a few seconds late — onunmute handles it.
+    const remoteVid=$('remoteVideo');
+    const tryShowRemoteVideo=()=>{
+      // Check srcObject first
+      if(remoteVid.srcObject){
+        const vtracks=remoteVid.srcObject.getVideoTracks();
+        vtracks.forEach(t=>{
+          // Set onunmute so we catch frames arriving late over TURN
+          t.onunmute=()=>{
+            remoteVid.classList.add('live');
+            document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+          };
+          // Already unmuted (same-country direct path) — show immediately
+          if(!t.muted){
+            remoteVid.classList.add('live');
+            document.querySelectorAll('.camera-placeholder').forEach(el=>el.classList.remove('visible'));
+          }
+        });
+      }
+      // Also pull from RTCPeerConnection receivers in case track event was missed
+      const pc=currentCall&&currentCall.peerConnection;
+      if(pc){
+        pc.getReceivers().forEach(r=>{
+          if(r.track&&r.track.kind==='video')attachRemoteVideoTrack(r.track);
+        });
+      }
+    };
+    tryShowRemoteVideo();
+    // Keep polling for up to 15s — handles slow TURN relay connections
+    let pollCount=0;
+    const videoPoll=setInterval(()=>{
+      if(phase!=='video'||pollCount++>30){clearInterval(videoPoll);return;}
+      if(!remoteVid.classList.contains('live'))tryShowRemoteVideo();
+      else clearInterval(videoPoll);
+    },500);
+
+    sendSignal('video-ready');
+    setStatus('video call — live','green');
+  }catch(e){
+    // Whatever broke, skip/report were already shown at the top of this
+    // function — the person is never stuck staring at a dead screen.
+    console.error('[rathe] upgradeToVideo error',e);
+    showToast('video had an issue — audio still live');
+    setStatus('audio call — live','green');
+    sendSignal('video-ready');
+  }
 }
 
 /* ── DISCONNECT WATCH ── */
@@ -1197,7 +1217,16 @@ function playCheer(){
 }
 
 /* ── CONTROLS ── */
-$('skipBtn').onclick=()=>{sendSignal('skip');reset();};
+// BUG FIX: reset() deletes the whole matches/<id> node (added last round to
+// keep the database from growing forever) — including the very signal we
+// just wrote. Calling it immediately raced the partner's realtime listener;
+// sometimes they'd never see "skip" before it got wiped, so their call
+// wouldn't auto-end. A short delay gives their listener time to receive it
+// first, then we clean up.
+$('skipBtn').onclick=()=>{
+  sendSignal('skip');
+  setTimeout(reset,300);
+};
 
 $('cancelBtn').onclick=()=>{
   clearTimers();
