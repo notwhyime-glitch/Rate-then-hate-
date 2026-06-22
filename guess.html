@@ -1056,13 +1056,26 @@ function pushMsg(text,type='chat'){
 }
 
 /* ── NAME MATCHING ── */
-// Returns true if typed text matches the character's full name OR first name
+// Strips everything except letters and spaces, lowercases, and collapses
+// extra whitespace. This makes "Monkey D. Luffy" == "monkey d luffy" == "MONKEY D LUFFY"
+// and "Spider-Man" == "spiderman" == "Spider Man".
+function normalizeGuess(str){
+  return str
+    .toLowerCase()
+    .replace(/[^a-z\s]/g,'')   // drop digits, punctuation, accents-as-symbols, etc.
+    .replace(/\s+/g,' ')       // collapse multiple spaces
+    .trim();
+}
+
+// Returns true if typed text matches the character's full name OR first name,
+// ignoring case and any special characters/punctuation.
 function matchesCharName(text){
   if(!myChar)return false;
-  const t=text.trim().toLowerCase();
-  const firstName=myChar.name.split(' ')[0].toLowerCase();
-  const fullName=myChar.name.toLowerCase();
-  return t===fullName||t===firstName;
+  const t=normalizeGuess(text);
+  if(!t)return false;
+  const normalizedFull=normalizeGuess(myChar.name);
+  const firstName=normalizedFull.split(' ')[0];
+  return t===normalizedFull||t===firstName;
 }
 
 /* ── SHARED CORRECT-GUESS SCORING ── */
